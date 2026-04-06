@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RideEaze</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #0f172a;
+            --bg-gradient-end: #020617;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-start: #3b82f6;
+            --accent-end: #8b5cf6;
+            --accent-hover: #4f46e5;
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --input-focus: #8b5cf6;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            background-attachment: fixed;
+        }
+
+        /* Ambient background glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15), transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            background: linear-gradient(to right, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+        }
+
+        h3::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 24px;
+            background: linear-gradient(to bottom, var(--accent-start), var(--accent-end));
+            margin-right: 12px;
+            border-radius: 4px;
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .content-box {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .content-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: rgba(148, 163, 184, 0.5);
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Select styling for dark mode */
+        select option {
+            background-color: var(--bg-gradient-start);
+            color: var(--text-primary);
+        }
+
+        /* Calendar icon invert for dark background inputs */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.6;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator:hover,
+        input[type="time"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #475569, #334155);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .save-btn:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            margin-top: 15px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .result-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(139, 92, 246, 0.5);
+            transform: scale(1.02);
+        }
+
+        .database-list {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Custom Scrollbar for list */
+        .database-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .database-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        .database-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .database-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        hr {
+            border: 0;
+            height: 1px;
+            background: var(--card-border);
+            margin: 10px 0;
+        }
+
+        /* Utility classes for JS injection formatting */
+        .highlight-name {
+            color: #60a5fa;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .highlight-score {
+            color: #8b5cf6;
+            font-weight: 700;
+        }
+
+        .highlight-fare {
+            color: #10b981;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .highlight-pickup {
+            color: #f43f5e;
+            font-weight: 600;
+        }
+
+        .highlight-dropoff {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading-msg {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--bg-gradient-start);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--danger);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .input-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto 40px auto; animation: fadeInDown 0.8s ease-out;">
+        <h2 style="margin-bottom: 0; animation: none;">Homepage</h2>
+        <button onclick="openBookingsModal()"
+            style="width: auto; padding: 10px 20px; box-shadow: none; font-size: 0.9rem;">Upcoming Bookings</button>
+    </div>
+
+    <div class="main-container">
+        <div class="content-box">
+            <h3>Search for Rides</h3>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Pickup Location</label>
+                    <input type="text" id="searchPickup" placeholder="A (e.g. A, B, C)">
+                </div>
+                <div class="input-group">
+                    <label>Dropoff Location</label>
+                    <input type="text" id="searchDropoff" placeholder="D (e.g. D, E)">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Travel Date</label>
+                    <input type="date" id="searchDate">
+                </div>
+                <div class="input-group">
+                    <label>Preferred Time</label>
+                    <input type="time" id="searchTime">
+                </div>
+            </div>
+            <button onclick="executeSearch()">Find Rides</button>
+
+            <h3 style="margin-top: 35px;">Search Results</h3>
+            <div id="resultsArea" class="loading-msg">Search results will appear here...</div>
+        </div>
+
+        <div class="content-box">
+            <h3>Active Driver Database</h3>
+            <div id="driverListArea" class="database-list">
+                <span class="loading-msg">Loading drivers...</span>
+            </div>
+
+            <h3 style="margin-top: 30px;">Add New Driver</h3>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Driver Name</label>
+                    <input type="text" id="newDriverName" placeholder="Enter name">
+                </div>
+                <div class="input-group">
+                    <label>Route</label>
+                    <input type="text" id="newDriverRoute" placeholder="A,B,C,D (comma separated)">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Date</label>
+                    <input type="date" id="newDriverDate">
+                </div>
+                <div class="input-group">
+                    <label>Start Time</label>
+                    <input type="time" id="newDriverTime">
+                </div>
+            </div>
+            <div class="input-row" style="margin-bottom: 25px;">
+                <div class="input-group">
+                    <label>Car Type</label>
+                    <select id="newDriverCar">
+                        <option value="Hatchback">Hatchback (Rs 4 / min)</option>
+                        <option value="Sedan" selected>Sedan (Rs 5 / min)</option>
+                        <option value="SUV">SUV (Rs 7 / min)</option>
+                    </select>
+                </div>
+            </div>
+            <button class="save-btn" onclick="sendDriverToDatabase()">Save Driver</button>
+        </div>
+    </div>
+
+    <!-- Bookings Modal -->
+    <div id="bookingsModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeBookingsModal()">&times;</span>
+            <h3 style="margin-top: 0;">Upcoming Bookings</h3>
+            <div id="bookingsListArea" class="database-list" style="margin-top: 20px; max-height: 350px;">
+                <span class="loading-msg">Loading your bookings...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Form Modal -->
+    <div id="bookingFormModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeBookingForm()">&times;</span>
+            <h3 id="bookingFormTitle" style="margin-top: 0;">Book Ride</h3>
+            <input type="hidden" id="bookDriverName">
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Passenger Name</label>
+                    <input type="text" id="bookPassName" placeholder="Your full name">
+                </div>
+                <div class="input-group">
+                    <label>Contact Number</label>
+                    <input type="text" id="bookContact" placeholder="Phone number">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="bookEmail" placeholder="your@email.com">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Travel Date</label>
+                    <input type="date" id="bookDate">
+                </div>
+                <div class="input-group">
+                    <label>Passengers</label>
+                    <input type="number" id="bookPassCount" value="1" min="1" max="6">
+                </div>
+            </div>
+            <button onclick="submitBooking()" style="margin-top: 15px;">Confirm Booking</button>
+        </div>
+    </div>
+
+    <script>
+        // automatically set the date boxes to today
+        var todayString = new Date().toISOString().split('T')[0];
+        document.getElementById('searchDate').value = todayString;
+        document.getElementById('newDriverDate').value = todayString;
+
+        // fetch the array of drivers from the cpp server
+        async function refreshDatabaseList() {
+            try {
+                let serverResponse = await fetch(`http://localhost:8080/api/drivers`);
+                let driverData = await serverResponse.json();
+
+                var outputHtml = "";
+                for (var i = 0; i < driverData.length; i++) {
+                    outputHtml += `<div style="padding: 5px 0;">
+                    <b style="color: #60a5fa;">${driverData[i].driverName}</b> <span style="color: #94a3b8; font-size:0.85em;">(${driverData[i].carType})</span><br>
+                    <span style="color: #cbd5e1;">${driverData[i].travelDate} at ${driverData[i].startTime}</span><br>
+                    <span style="color: #94a3b8;">Route: <b style="color:#e2e8f0;">${driverData[i].driverRoute}</b></span>
+                </div><hr>`;
+                }
+                if (driverData.length === 0) {
+                    document.getElementById('driverListArea').innerHTML = "<span class='loading-msg'>No drivers found.</span>";
+                } else {
+                    document.getElementById('driverListArea').innerHTML = outputHtml;
+                }
+            } catch (error) {
+                document.getElementById('driverListArea').innerHTML = "<div class='error-msg'>⚠ Cannot connect to C++ server! Ensure it is running.</div>";
+            }
+        }
+
+        // load it when the page opens
+        refreshDatabaseList();
+
+        // send new driver info to cpp
+        async function sendDriverToDatabase() {
+            var inputName = document.getElementById('newDriverName').value;
+            var inputRoute = document.getElementById('newDriverRoute').value;
+            var inputDate = document.getElementById('newDriverDate').value;
+            var inputTime = document.getElementById('newDriverTime').value;
+            var inputCar = document.getElementById('newDriverCar').value;
+
+            if (inputName == "" || inputRoute == "" || inputTime == "") {
+                alert("Please fill in all the driver details.");
+                return;
+            }
+
+            try {
+                await fetch(`http://localhost:8080/api/add?nameInput=${inputName}&routeInput=${inputRoute}&dateInput=${inputDate}&startInput=${inputTime}&carInput=${inputCar}`);
+                refreshDatabaseList();
+
+                // clear the boxes after saving
+                document.getElementById('newDriverName').value = "";
+                document.getElementById('newDriverRoute').value = "";
+                document.getElementById('newDriverTime').value = "";
+            } catch (error) {
+                alert("Error: Cannot connect to C++ backend.");
+            }
+        }
+
+        // search logic
+        async function executeSearch() {
+            var pickup = document.getElementById('searchPickup').value;
+            var dropoff = document.getElementById('searchDropoff').value;
+            var date = document.getElementById('searchDate').value;
+            var time = document.getElementById('searchTime').value;
+            var resultsBox = document.getElementById('resultsArea');
+
+            // Sanitize or adjust based on old code requiring uppercase
+            pickup = pickup.toUpperCase();
+            dropoff = dropoff.toUpperCase();
+
+            if (pickup == "" || dropoff == "" || date == "" || time == "") {
+                resultsBox.innerHTML = "<div class='error-msg'>⚠ Please fill all search fields.</div>";
+                return;
+            }
+
+            resultsBox.innerHTML = "<div class='loading-msg'>Searching for best rides...</div>";
+
+            try {
+                // URL calls match the new full variable names in C++
+                let serverResponse = await fetch(`http://localhost:8080/api/search?pickupLocation=${pickup}&dropoffLocation=${dropoff}&travelDate=${date}&preferredTime=${time}`);
+                let matchArray = await serverResponse.json();
+
+                // manual sorting algorithm 
+                for (var i = 0; i < matchArray.length; i++) {
+                    for (var j = i + 1; j < matchArray.length; j++) {
+                        if (matchArray[j].matchScore > matchArray[i].matchScore) {
+                            var temporaryHolder = matchArray[i];
+                            matchArray[i] = matchArray[j];
+                            matchArray[j] = temporaryHolder;
+                        }
+                    }
+                }
+
+                if (matchArray.length == 0) {
+                    resultsBox.innerHTML = "<div class='error-msg'>⚠ No matching rides found.</div>";
+                    return;
+                }
+
+                var finalHtml = "";
+                for (var i = 0; i < matchArray.length; i++) {
+                    var currentMatch = matchArray[i];
+                    var dayNote = "";
+                    if (currentMatch.daysDifference == 0) {
+                        dayNote = "Same Day";
+                    } else {
+                        dayNote = currentMatch.daysDifference + " days diff";
+                    }
+
+                    finalHtml += `
+                <div class='result-card'>
+                    <div style="margin-bottom: 8px;">
+                        <span class="highlight-name">${currentMatch.driverName}</span> 
+                        <span style="color:var(--text-secondary); font-size:0.9em;">(${dayNote}) • ${currentMatch.carType}</span>
+                    </div>
+                    <div style="margin-bottom: 8px; font-size: 0.95em;">
+                        Match Score: <span class="highlight-score">${currentMatch.matchScore}%</span> | 
+                        Fare: <span class="highlight-fare">Rs ${currentMatch.totalPrice}</span>
+                    </div>
+                    <div style="margin-bottom: 8px; font-size: 0.9em; color: var(--text-secondary);">
+                        Shared Route: <span style="color:var(--text-primary); font-weight:500;">${currentMatch.sharedPath}</span>
+                    </div>
+                    <div style="font-size: 0.9em; margin-bottom: 12px;">
+                        Pickup ETA: <span class="highlight-pickup">${currentMatch.pickupEta}</span> | 
+                        Dropoff ETA: <span class="highlight-dropoff">${currentMatch.dropoffEta}</span>
+                    </div>
+                    <button onclick="openBookingForm('${currentMatch.driverName}')" style="padding: 10px; font-size: 0.9rem; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); box-shadow: none;">Book Ride</button>
+                </div>`;
+                }
+                resultsBox.innerHTML = finalHtml;
+
+            } catch (error) {
+                resultsBox.innerHTML = "<div class='error-msg'>⚠ Error: C++ server is not responding.</div>";
+            }
+        }
+
+        // Booking logic
+        function openBookingForm(driver) {
+            document.getElementById('bookDriverName').value = driver;
+            document.getElementById('bookingFormTitle').innerHTML = "Book Ride with " + driver;
+            document.getElementById('bookDate').value = document.getElementById('searchDate').value;
+            document.getElementById('bookingFormModal').style.display = "flex";
+        }
+
+        function closeBookingForm() {
+            document.getElementById('bookingFormModal').style.display = "none";
+        }
+
+        async function submitBooking() {
+            var driverName = document.getElementById('bookDriverName').value;
+            var passName = document.getElementById('bookPassName').value;
+            var contact = document.getElementById('bookContact').value;
+            var email = document.getElementById('bookEmail').value;
+            var date = document.getElementById('bookDate').value;
+            var count = document.getElementById('bookPassCount').value;
+
+            if (passName == "" || contact == "" || email == "" || date == "" || count == "") {
+                alert("Please fill in all booking details.");
+                return;
+            }
+
+            try {
+                // Ensure spaces are properly encoded for URL query string manually
+                await fetch(`http://localhost:8080/api/book?passengerName=${passName}&contactNumber=${contact}&emailAddress=${email}&travelDate=${date}&passengerCount=${count}&driverName=${driverName}`);
+                alert("Booking successful!");
+                closeBookingForm();
+
+                // clear form
+                document.getElementById('bookPassName').value = "";
+                document.getElementById('bookContact').value = "";
+                document.getElementById('bookEmail').value = "";
+                document.getElementById('bookPassCount').value = "1";
+            } catch (error) {
+                alert("Error: Cannot connect to backend to save booking.");
+            }
+        }
+
+        // View Upcoming Bookings Logic
+        function openBookingsModal() {
+            document.getElementById('bookingsModal').style.display = "flex";
+            fetchBookings();
+        }
+
+        function closeBookingsModal() {
+            document.getElementById('bookingsModal').style.display = "none";
+        }
+
+        async function fetchBookings() {
+            try {
+                let response = await fetch(`http://localhost:8080/api/bookings`);
+                let bookingsData = await response.json();
+
+                var output = "";
+                for (var i = 0; i < bookingsData.length; i++) {
+                    output += `<div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--card-border);">
+                        <b style="color: #10b981; font-size: 1.05rem;">Passenger: ${bookingsData[i].passengerName}</b> <span style="color:var(--text-secondary)">(${bookingsData[i].passengerCount} pax)</span><br>
+                        <span style="display:inline-block; margin-top:5px; color:var(--text-primary);">Contact: ${bookingsData[i].contactNumber} | ${bookingsData[i].emailAddress}</span><br>
+                        <hr style="margin: 8px 0; border-color: rgba(255,255,255,0.05);">
+                        <span style="color: #60a5fa; font-weight: 500;">Driver: ${bookingsData[i].driverName}</span> on <b style="color:var(--text-primary);">${bookingsData[i].travelDate}</b>
+                    </div>`;
+                }
+
+                if (bookingsData.length === 0) {
+                    document.getElementById('bookingsListArea').innerHTML = "<span class='loading-msg'>No upcoming bookings found.</span>";
+                } else {
+                    document.getElementById('bookingsListArea').innerHTML = output;
+                }
+            } catch (error) {
+                document.getElementById('bookingsListArea').innerHTML = "<div class='error-msg'>⚠ Cannot load bookings. Is server running?</div>";
+            }
+        }
+    </script>
+
+</body>
+
+</html>
