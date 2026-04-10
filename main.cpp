@@ -26,7 +26,7 @@ struct BookingRecord {
     string driverName;
 };
 
-// Global variables with clear names
+// Global variables 
 map<string, map<string, int>> cityTravelGraph;
 vector<DriverRecord> driverDatabase;
 vector<BookingRecord> bookingDatabase;
@@ -37,14 +37,14 @@ int calculateTotalDays(string dateString) {
     int month = stoi(dateString.substr(5, 2));
     int day = stoi(dateString.substr(8, 2));
     
-    // simple array of days in each month
+
     int daysInMonth[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     
     int totalDays = (year * 365) + day;
     for(int i = 1; i < month; i++) {
         totalDays = totalDays + daysInMonth[i];
     }
-    return totalDays; // ignoring leap years to keep logic simple
+    return totalDays; 
 }
 
 // find difference between 
@@ -77,19 +77,25 @@ string formatTimeAMPM(int timeInMinutes) {
     return to_string(hours) + ":" + minuteString + " " + ampmIndicator;
 }
 
-// Load starting data
 void loadInitialData() {
     cityTravelGraph["A"]["B"] = 15; cityTravelGraph["A"]["F"] = 10; cityTravelGraph["A"]["C"] = 30;
     cityTravelGraph["B"]["C"] = 25; cityTravelGraph["B"]["H"] = 15; cityTravelGraph["B"]["D"] = 20;
     cityTravelGraph["C"]["D"] = 10; cityTravelGraph["C"]["Z"] = 40; cityTravelGraph["C"]["E"] = 15;
     cityTravelGraph["D"]["E"] = 20; cityTravelGraph["D"]["H"] = 10; cityTravelGraph["D"]["F"] = 25;
 
-    driverDatabase.push_back({"Madhvan", {"A", "B", "C", "D", "E"}, "2026-03-24", 800, 1200, "SUV"});
-    driverDatabase.push_back({"Neha", {"X", "Y", "B", "C", "Z"}, "2026-03-24", 900, 1100, "Sedan"});
-    driverDatabase.push_back({"Rahul", {"A", "B", "C", "D"}, "2026-03-26", 700, 1000, "Hatchback"});
+    driverDatabase.push_back({"Madhvan", {"A", "B", "C", "D", "E"}, "2026-04-09", 800, 1200, "SUV"});
+    driverDatabase.push_back({"Neha", {"X", "Y", "B", "C", "Z"}, "2026-04-10", 900, 1100, "Sedan"});
+    driverDatabase.push_back({"Rahul", {"A", "B", "C", "D"}, "2026-04-11", 700, 1000, "Hatchback"});
+    driverDatabase.push_back({"Speedy John", {"F", "A", "C", "E"}, "2026-04-09", 830, 1300, "Hatchback"});
+    driverDatabase.push_back({"Cruise Sarah", {"H", "B", "C", "Z"}, "2026-04-10", 1000, 1400, "Sedan"});
+    driverDatabase.push_back({"Big Mike", {"D", "H", "B", "A"}, "2026-04-12", 600, 1500, "SUV"});
+    driverDatabase.push_back({"Turbo Tom", {"Z", "C", "D", "E"}, "2026-04-11", 1100, 1600, "Sedan"});
+    driverDatabase.push_back({"Drift Dave", {"E", "D", "C", "B", "A"}, "2026-04-13", 1400, 1800, "Hatchback"});
+    driverDatabase.push_back({"Rapid Rachel", {"A", "C", "E", "Z"}, "2026-04-09", 700, 1000, "SUV"});
+    driverDatabase.push_back({"Lightning Luke", {"F", "D", "B", "A"}, "2026-04-14", 900, 1200, "Hatchback"});
 }
 
-// Create a JSON string to send all drivers to the HTML page
+
 string buildDriversJSON() {
     string finalJson = "[";
     for(int i = 0; i < driverDatabase.size(); i++) {
@@ -115,7 +121,7 @@ string buildDriversJSON() {
     return finalJson;
 }
 
-// Create a JSON string to send all bookings to the HTML page
+
 string buildBookingsJSON() {
     string finalJson = "[";
     for(int i = 0; i < bookingDatabase.size(); i++) {
@@ -163,7 +169,7 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             //  1 day early and 2 days late
             if (differenceInDays >= -1 && differenceInDays <= 2) {
                 
-                //  Calculate time to reach pickup location
+
                 int travelToPickupMinutes = 0;
                 for (int k = 0; k < pickupIndex; k++) {
                     string currentNode = currentDriver.driverRoute[k];
