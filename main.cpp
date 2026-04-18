@@ -26,10 +26,17 @@ struct BookingRecord {
     string driverName;
 };
 
+struct UserRecord {
+    string username;
+    string password;
+};
+
+// Backend operates as a high-speed matchmaker, passing raw strings to frontend APIs
+
 // Global variables 
-map<string, map<string, int>> cityTravelGraph;
 vector<DriverRecord> driverDatabase;
 vector<BookingRecord> bookingDatabase;
+vector<UserRecord> userDatabase;
 
 // calculate days from date 44-04-2211
 int calculateTotalDays(string dateString) {
@@ -78,21 +85,19 @@ string formatTimeAMPM(int timeInMinutes) {
 }
 
 void loadInitialData() {
-    cityTravelGraph["A"]["B"] = 15; cityTravelGraph["A"]["F"] = 10; cityTravelGraph["A"]["C"] = 30;
-    cityTravelGraph["B"]["C"] = 25; cityTravelGraph["B"]["H"] = 15; cityTravelGraph["B"]["D"] = 20;
-    cityTravelGraph["C"]["D"] = 10; cityTravelGraph["C"]["Z"] = 40; cityTravelGraph["C"]["E"] = 15;
-    cityTravelGraph["D"]["E"] = 20; cityTravelGraph["D"]["H"] = 10; cityTravelGraph["D"]["F"] = 25;
+    driverDatabase.push_back({"Madhvan", {"DELHI", "GURGAON", "JAIPUR", "AJMER"}, "2026-04-19", 800, 1200, "SUV"});
+    driverDatabase.push_back({"Neha", {"CHANDIGARH", "PANIPAT", "DELHI", "NOIDA"}, "2026-04-20", 900, 1100, "Sedan"});
+    driverDatabase.push_back({"Rahul", {"NOIDA", "AGRA", "KANPUR", "LUCKNOW"}, "2026-04-21", 700, 1000, "Hatchback"});
+    driverDatabase.push_back({"Speedy John", {"JAIPUR", "AJMER", "UDAIPUR", "AHMEDABAD"}, "2026-04-19", 830, 1300, "Hatchback"});
+    driverDatabase.push_back({"Cruise Sarah", {"GURGAON", "DELHI", "NOIDA", "AGRA"}, "2026-04-20", 1000, 1400, "Sedan"});
+    driverDatabase.push_back({"Big Mike", {"MUMBAI", "PUNE", "LONAVALA"}, "2026-04-22", 600, 1500, "SUV"});
+    driverDatabase.push_back({"Turbo Tom", {"DELHI", "MATHURA", "AGRA", "GWALIOR"}, "2026-04-21", 1100, 1600, "Sedan"});
+    driverDatabase.push_back({"Drift Dave", {"LUCKNOW", "KANPUR", "AGRA", "NOIDA"}, "2026-04-23", 1400, 1800, "Hatchback"});
+    driverDatabase.push_back({"Rapid Rachel", {"CHANDIGARH", "AMBALA", "DELHI", "GURGAON"}, "2026-04-19", 700, 1000, "SUV"});
+    driverDatabase.push_back({"Lightning Luke", {"PUNE", "LONAVALA", "MUMBAI", "SURAT"}, "2026-04-24", 900, 1200, "Hatchback"});
 
-    driverDatabase.push_back({"Madhvan", {"A", "B", "C", "D", "E"}, "2026-04-09", 800, 1200, "SUV"});
-    driverDatabase.push_back({"Neha", {"X", "Y", "B", "C", "Z"}, "2026-04-10", 900, 1100, "Sedan"});
-    driverDatabase.push_back({"Rahul", {"A", "B", "C", "D"}, "2026-04-11", 700, 1000, "Hatchback"});
-    driverDatabase.push_back({"Speedy John", {"F", "A", "C", "E"}, "2026-04-09", 830, 1300, "Hatchback"});
-    driverDatabase.push_back({"Cruise Sarah", {"H", "B", "C", "Z"}, "2026-04-10", 1000, 1400, "Sedan"});
-    driverDatabase.push_back({"Big Mike", {"D", "H", "B", "A"}, "2026-04-12", 600, 1500, "SUV"});
-    driverDatabase.push_back({"Turbo Tom", {"Z", "C", "D", "E"}, "2026-04-11", 1100, 1600, "Sedan"});
-    driverDatabase.push_back({"Drift Dave", {"E", "D", "C", "B", "A"}, "2026-04-13", 1400, 1800, "Hatchback"});
-    driverDatabase.push_back({"Rapid Rachel", {"A", "C", "E", "Z"}, "2026-04-09", 700, 1000, "SUV"});
-    driverDatabase.push_back({"Lightning Luke", {"F", "D", "B", "A"}, "2026-04-14", 900, 1200, "Hatchback"});
+    // default student
+    userDatabase.push_back({"student", "password123"});
 }
 
 
@@ -164,88 +169,35 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
 
         // If both nodes are found and pickup comes before dropoff
         if (pickupIndex != -1 && dropoffIndex != -1 && pickupIndex < dropoffIndex) {
-            int differenceInDays = getDaysDifference(requestedDate, currentDriver.travelDate);
+            int driverStartMinutes = (currentDriver.startTime / 100) * 60 + (currentDriver.startTime % 100);
 
-            //  1 day early and 2 days late
-            if (differenceInDays >= -1 && differenceInDays <= 2) {
-                
-
-                int travelToPickupMinutes = 0;
-                for (int k = 0; k < pickupIndex; k++) {
-                    string currentNode = currentDriver.driverRoute[k];
-                    string nextNode = currentDriver.driverRoute[k+1];
-                    if (cityTravelGraph[currentNode][nextNode]) {
-                        travelToPickupMinutes = travelToPickupMinutes + cityTravelGraph[currentNode][nextNode];
-                    } else {
-                        travelToPickupMinutes = travelToPickupMinutes + 20; // default backup weight
-                    }
+            string sharedPathString = "";
+            for(int x = pickupIndex; x <= dropoffIndex; x++) {
+                sharedPathString = sharedPathString + currentDriver.driverRoute[x];
+                if(x < dropoffIndex) {
+                    sharedPathString = sharedPathString + "->";
                 }
-                
-                int driverStartMinutes = (currentDriver.startTime / 100) * 60 + (currentDriver.startTime % 100);
-                int calculatedEtaMinutes = driverStartMinutes + travelToPickupMinutes;
-                int timeDifference = abs(calculatedEtaMinutes - requestedMinutes);
-
-                // 2. Calculate shared travel time to destination
-                int sharedTravelMinutes = 0;
-                for (int j = pickupIndex; j < dropoffIndex; j++) {
-                    string currentNode = currentDriver.driverRoute[j];
-                    string nextNode = currentDriver.driverRoute[j+1];
-                    if (cityTravelGraph[currentNode][nextNode]) {
-                        sharedTravelMinutes = sharedTravelMinutes + cityTravelGraph[currentNode][nextNode];
-                    } else {
-                        sharedTravelMinutes = sharedTravelMinutes + 20;
-                    }
-                }
-
-                // pricing choice
-                int pricePerMinute = 5; 
-                if (currentDriver.carType == "Hatchback") {
-                    pricePerMinute = 4;
-                } else if (currentDriver.carType == "SUV") {
-                    pricePerMinute = 7;
-                }
-                int calculatedPrice = 50 + (sharedTravelMinutes * pricePerMinute); 
-                
-                // Exact time reach the dropoff node
-                int dropoffEtaMinutes = calculatedEtaMinutes + sharedTravelMinutes;
-
-                // Penalty scoring engine
-                int extraStops = currentDriver.driverRoute.size() - (dropoffIndex - pickupIndex + 1);
-                int compatibilityScore = 100 - (extraStops * 5) - (timeDifference / 5) - (abs(differenceInDays) * 25);
-                
-                if (compatibilityScore < 0) {
-                    compatibilityScore = 0; // prevent negative scores
-                }
-
-                string sharedPathString = "";
-                for(int x = pickupIndex; x <= dropoffIndex; x++) {
-                    sharedPathString = sharedPathString + currentDriver.driverRoute[x];
-                    if(x < dropoffIndex) {
-                        sharedPathString = sharedPathString + "->";
-                    }
-                }
-
-                int printEtaFormat = (calculatedEtaMinutes / 60) * 100 + (calculatedEtaMinutes % 60);
-                int printDropoffFormat = (dropoffEtaMinutes / 60) * 100 + (dropoffEtaMinutes % 60);
-
-                // Add to JSON output
-                if (!isFirstItem) {
-                    resultJson = resultJson + ",";
-                }
-                
-                resultJson = resultJson + "{";
-                resultJson = resultJson + "\"driverName\":\"" + currentDriver.driverName + "\",";
-                resultJson = resultJson + "\"sharedPath\":\"" + sharedPathString + "\",";
-                resultJson = resultJson + "\"matchScore\":" + to_string(compatibilityScore) + ",";
-                resultJson = resultJson + "\"totalPrice\":" + to_string(calculatedPrice) + ",";
-                resultJson = resultJson + "\"daysDifference\":" + to_string(differenceInDays) + ",";
-                resultJson = resultJson + "\"carType\":\"" + currentDriver.carType + "\",";
-                resultJson = resultJson + "\"pickupEta\":\"" + formatTimeAMPM(printEtaFormat) + "\",";
-                resultJson = resultJson + "\"dropoffEta\":\"" + formatTimeAMPM(printDropoffFormat) + "\"";
-                resultJson = resultJson + "}";
-                
-                isFirstItem = false;
             }
+
+            int extraStops = currentDriver.driverRoute.size() - (dropoffIndex - pickupIndex + 1);
+
+            if (!isFirstItem) {
+                resultJson = resultJson + ",";
+            }
+            
+            resultJson = resultJson + "{";
+            resultJson = resultJson + "\"driverName\":\"" + currentDriver.driverName + "\",";
+            resultJson = resultJson + "\"sharedPath\":\"" + sharedPathString + "\",";
+            resultJson = resultJson + "\"carType\":\"" + currentDriver.carType + "\",";
+            resultJson = resultJson + "\"driverStartMinutes\":" + to_string(driverStartMinutes) + ",";
+            resultJson = resultJson + "\"requestedMinutes\":" + to_string(requestedMinutes) + ",";
+            resultJson = resultJson + "\"extraStops\":" + to_string(extraStops) + ",";
+            resultJson = resultJson + "\"pickupIndex\":" + to_string(pickupIndex) + ",";
+            resultJson = resultJson + "\"travelDate\":\"" + currentDriver.travelDate + "\",";
+            resultJson = resultJson + "\"startNode\":\"" + currentDriver.driverRoute[0] + "\"";
+            resultJson = resultJson + "}";
+            
+            isFirstItem = false;
         }
     }
     resultJson = resultJson + "]";
@@ -255,6 +207,37 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
 int main() {
     loadInitialData();
     httplib::Server localServer;
+
+    localServer.Get("/api/signup", [](const httplib::Request& request, httplib::Response& response) {
+        response.set_header("Access-Control-Allow-Origin", "*");
+        string user = request.get_param_value("u");
+        string pass = request.get_param_value("p");
+        
+        for (int i = 0; i < userDatabase.size(); i++) {
+            if (userDatabase[i].username == user) {
+                response.set_content("Exists", "text/plain");
+                return;
+            }
+        }
+        
+        userDatabase.push_back({user, pass});
+        response.set_content("Success", "text/plain");
+    });
+
+    localServer.Get("/api/login", [](const httplib::Request& request, httplib::Response& response) {
+        response.set_header("Access-Control-Allow-Origin", "*");
+        string user = request.get_param_value("u");
+        string pass = request.get_param_value("p");
+        
+        for (int i = 0; i < userDatabase.size(); i++) {
+            if (userDatabase[i].username == user && userDatabase[i].password == pass) {
+                response.set_content("Success", "text/plain");
+                return;
+            }
+        }
+        
+        response.set_content("Failed", "text/plain");
+    });
 
     // Search Endpoint
     localServer.Get("/api/search", [](const httplib::Request& request, httplib::Response& response) {
@@ -335,7 +318,6 @@ int main() {
         string inputPassengerCount = request.get_param_value("passengerCount");
         string inputDriverName = request.get_param_value("driverName");
         
-        // Add to global vector
         bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName});
         
         response.set_content("Success", "text/plain");

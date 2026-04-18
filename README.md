@@ -1,47 +1,49 @@
 # RideEaze Management System
 
-RideEaze is a modern, high-performance ride-booking management system built to provide an intuitive interface for finding available rides and building an active database of potential travel solutions. By combining a robust C++ backend with a sleek, premium, dark-mode inspired web frontend, the system offers an exceptionally fast and responsive experience.
+RideEaze is a fast, simplified ride-booking management architecture styled specifically as a highly readable, manual student-project codebase. It demonstrates full-stack connectivity using a minimalist lightweight C++ server and an elegant Violet/Indigo accented Vanilla Javascript frontend.
 
-## ✨ Features
+## ✨ Core Features
 
-- **Search & Book Rides:** Quickly find available rides between your pickup and dropoff locations considering requested travel dates.
-- **Intelligent Matching Algorithm:** Ride matching takes into account the driver's current route, calculating shared path ETA to find the most suitable ride. Matches are ranked by compatibility percent scores (factoring in penalties for extra stops or varied dates) giving you the absolute best ride optimal for your time. 
-- **Dynamic Driver Management:** Actively view the driver list in an easy-to-read database view and comfortably add new drivers straight from the intuitive GUI.
+- **Live City Mapping:** Integrates real-world OpenStreetMap (Nominatim) endpoints for live Indian city selection.
+- **Dynamic Routing Engine:** Injects real-world distances and calculated travel times straight into the front-end via the high-performance OSRM routing API.
+- **Built for Readability:** Explicitly avoids complex array/map automation (like Javascript `.maps` or C++ lambdas where possible) in favor of simple, visual `for` loops, so mechanics are incredibly transparent.
+- **In-Memory Volatile Sandbox:** Uses pure C++ arrays instead of database connections. Any modifications or new user additions are fully wiped upon a server reset, providing a perfect sandbox testing environment for presentation days.
+- **Visual Route Building:** Drivers can intuitively build visual routing arrays natively in the UI using dropdowns avoiding standard string inputs.
 - **Simple, Fast Backend API:** Custom C++ HTTP server functioning to provide robust REST-like endpoints sending back fast JSON responses payload.
-- **Premium User-Interface:** Visually appealing cards with modern micro-animations, neon accenting features and custom formatting to separate your screen efficiently.
 
 ## 🚀 Tech Stack
 
 - **Backend:** C++ (with `httplib.h` header-only library)
-- **Frontend:** HTML5, CSS3 styling with Glassmorphism, Vanilla JavaScript
-- **Data Architecture:** In-memory vector databases with map-structured city graphs
+- **Frontend:** HTML5, Modern CSS Variables, Vanilla JavaScript 
+- **APIs:** OpenStreetMap (Nominatim), OSRM Distance Matrix
 
 ## 💻 Local Setup
 
 1. **Compile Backend**
 Use `g++` to compile the server code. 
 ```bash
-g++ -o main main.cpp
+g++ -std=c++11 -o main main.cpp
 ```
-*(Note for Linux users: if you face issues, use the `-pthread` flag)*
 
 2. **Run the Server**
 ```bash
 ./main
 ```
-*The backend will boot up and start listening on port 8080.*
+*The backend will boot up and load a set of default dummy drivers. It will start listening on port 8080.*
 
 3. **Open the Front End**
-Simply double-click the `RideEaze_UI.html` file in your system, or open it in your favorite web browser to load the dashboard. Allow the scripts to run and make requests to `localhost:8080`. 
+Simply double-click the `RideEaze_UI.html` file in your system to load the dashboard. Allow the scripts to run and make requests to `localhost:8080`.
 
 ## 🗺️ Getting Started
 
-Try adding a new driver or looking for available matching! The system already pre-loads specific dummy city pathing representing distance mapping, such as tracking travel through nodes `A -> B -> C -> D`. 
+When you land on the page, the system will prompt you for authentication.
+- **Default Username:** `student`
+- **Default Password:** `password123`
 
 To try a test search:
-1. Enter `A` for your pickup location.
-2. Enter `D` for your dropoff location. 
-3. Leave the dates matching the system and hit find!
+1. Search for `DELHI` as the pickup location from the live dropdown.
+2. Search for `JAIPUR` as the dropoff location.
+3. Hit Find Rides and watch the algorithm evaluate the dummy drivers using the real-world OSRM routing!
 
 ---
-*Built meticulously to deliver seamless functional presentation.*
+*Built to deliver seamless functional presentation for student review.*

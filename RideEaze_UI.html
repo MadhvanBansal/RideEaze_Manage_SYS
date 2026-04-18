@@ -10,18 +10,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #f8fafc;
+            --bg-color: #f5f3ff;
             --card-bg: #ffffff;
-            --card-border: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-secondary: #475569;
-            --accent-primary: #2563eb;
-            --accent-hover: #1e3a8a;
+            --card-border: #ede9fe;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --accent-primary: #8b5cf6;
+            --accent-hover: #7c3aed;
             --input-bg: #ffffff;
-            --input-border: #cbd5e1;
-            --input-focus: #3b82f6;
-            --danger: #dc2626;
-            --success: #059669;
+            --input-border: #ddd6fe;
+            --input-focus: #a78bfa;
+            --danger: #ef4444;
+            --success: #10b981;
         }
 
         * {
@@ -268,13 +268,60 @@
                 gap: 10px;
             }
         }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f8fafc;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Login/Signup Overlay -->
+    <div id="loginOverlay" class="modal-overlay" style="display: flex; background: var(--bg-color); backdrop-filter: none; z-index: 9999;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h2 id="authTitle" style="margin-bottom: 25px; font-size: 1.8rem; color: var(--accent-primary);">RideEaze Login</h2>
+            
+            <div class="input-group" style="text-align: left; margin-bottom: 15px;">
+                <label>Username</label>
+                <input type="text" id="authUsername" placeholder="Enter username">
+            </div>
+            <div class="input-group" style="text-align: left; margin-bottom: 25px;">
+                <label>Password</label>
+                <input type="password" id="authPassword" placeholder="Enter password">
+            </div>
+            
+            <button id="authBtn" onclick="submitAuth()">Sign In</button>
+            
+            <div style="margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                <span id="authToggleText">New user? </span>
+                <span onclick="toggleAuthMode()" style="color: var(--accent-primary); cursor: pointer; font-weight: 500;">Create Account</span>
+            </div>
+        </div>
+    </div>
 
-    <div
-        style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto 40px auto;">
+    <div id="mainApp" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto 40px auto;">
         <h2 style="margin-bottom: 0;">Homepage</h2>
         <button onclick="openBookingsModal()"
             style="width: auto; padding: 10px 20px; font-size: 0.9rem; background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-primary);">Upcoming Bookings</button>
@@ -284,13 +331,15 @@
         <div class="content-box">
             <h3>Search for Rides</h3>
             <div class="input-row">
-                <div class="input-group">
+                <div class="input-group" style="position: relative;">
                     <label>Pickup Location</label>
-                    <input type="text" id="searchPickup" placeholder="(e.g. A, B, C)">
+                    <input type="text" id="searchPickup" placeholder="Enter Indian City..." oninput="handleAutocomplete(this, 'pickup')">
+                    <div id="pickupDropdown" class="autocomplete-dropdown"></div>
                 </div>
-                <div class="input-group">
+                <div class="input-group" style="position: relative;">
                     <label>Dropoff Location</label>
-                    <input type="text" id="searchDropoff" placeholder="(e.g. D, E)">
+                    <input type="text" id="searchDropoff" placeholder="Enter Indian City..." oninput="handleAutocomplete(this, 'dropoff')">
+                    <div id="dropoffDropdown" class="autocomplete-dropdown"></div>
                 </div>
             </div>
             <div class="input-row">
@@ -310,20 +359,20 @@
         </div>
 
         <div class="content-box">
-            <h3>Active Driver Database</h3>
-            <div id="driverListArea" class="database-list">
-                <span class="loading-msg">Loading drivers...</span>
-            </div>
-
-            <h3 style="margin-top: 30px;">Add New Driver</h3>
+            <h3 style="margin-top: 10px;">Add New Driver</h3>
             <div class="input-row">
                 <div class="input-group">
                     <label>Driver Name</label>
                     <input type="text" id="newDriverName" placeholder="Enter name">
                 </div>
-                <div class="input-group">
-                    <label>Route</label>
-                    <input type="text" id="newDriverRoute" placeholder="A,B,C,D (comma separated)">
+                <div class="input-group" style="position: relative;">
+                    <label>Build Route</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="routeBuilderInput" placeholder="Enter City..." oninput="handleAutocomplete(this, 'route')">
+                        <button onclick="addCityToRoute()" style="width: auto; padding: 0 20px;">Add</button>
+                    </div>
+                    <div id="routeDropdown" class="autocomplete-dropdown"></div>
+                    <div id="builtRouteDisplay" style="margin-top: 10px; font-size: 0.9rem; color: var(--accent-primary); font-weight: 500;">Current Route: [Empty]</div>
                 </div>
             </div>
             <div class="input-row">
@@ -398,63 +447,197 @@
         </div>
     </div>
 
+    </div> <!-- end mainApp -->
+
     <script>
+        // Auth Logic
+        let isLoginMode = true;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authTitle').innerText = isLoginMode ? "RideEaze Login" : "Create Account";
+            document.getElementById('authBtn').innerText = isLoginMode ? "Sign In" : "Sign Up";
+            document.getElementById('authToggleText').innerText = isLoginMode ? "New user? " : "Already registered? ";
+            document.getElementById('authUsername').value = "";
+            document.getElementById('authPassword').value = "";
+        }
+
+        async function submitAuth() {
+            let u = document.getElementById('authUsername').value;
+            let p = document.getElementById('authPassword').value;
+
+            if (u == "" || p == "") {
+                alert("Please enter username and password.");
+                return;
+            }
+
+            let endpoint = isLoginMode ? "/api/login" : "/api/signup";
+            
+            try {
+                let res = await fetch(`http://localhost:8080${endpoint}?u=${u}&p=${p}`);
+                let msg = await res.text();
+
+                if (msg == "Exists") {
+                    alert("Username already exists!");
+                } else if (msg == "Failed") {
+                    alert("Invalid credentials.");
+                } else if (msg == "Success") {
+                    document.getElementById('loginOverlay').style.display = "none";
+                    document.getElementById('mainApp').style.display = "block";
+                }
+            } catch(e) {
+                alert("Cannot connect to server. Is C++ running?");
+            }
+        }
+
         // automatically set the date boxes to today
         var todayString = new Date().toISOString().split('T')[0];
         document.getElementById('searchDate').value = todayString;
         document.getElementById('newDriverDate').value = todayString;
 
-        // fetch the array of drivers from the cpp server
-        async function refreshDatabaseList() {
-            try {
-                let serverResponse = await fetch(`http://localhost:8080/api/drivers`);
-                let driverData = await serverResponse.json();
+        let builtDriverRouteArray = [];
 
-                var outputHtml = "";
-                for (var i = 0; i < driverData.length; i++) {
-                    outputHtml += `<div style="padding: 5px 0;">
-                    <b style="color: var(--accent-primary);">${driverData[i].driverName}</b> <span style="color: var(--text-secondary); font-size:0.85em;">(${driverData[i].carType})</span><br>
-                    <span style="color: var(--text-secondary);">${driverData[i].travelDate} at ${driverData[i].startTime}</span><br>
-                    <span style="color: var(--text-secondary);">Route: <b style="color:var(--text-primary);">${driverData[i].driverRoute}</b></span>
-                </div><hr>`;
-                }
-                if (driverData.length === 0) {
-                    document.getElementById('driverListArea').innerHTML = "<span class='loading-msg'>No drivers found.</span>";
-                } else {
-                    document.getElementById('driverListArea').innerHTML = outputHtml;
-                }
-            } catch (error) {
-                document.getElementById('driverListArea').innerHTML = "<div class='error-msg'>⚠ Cannot connect to C++ server! Ensure it is running.</div>";
+        function addCityToRoute() {
+            var inputElem = document.getElementById('routeBuilderInput');
+            var city = inputElem.value.toUpperCase();
+            
+            if (city == "") {
+                alert("Please search and select a city first.");
+                return;
             }
+
+            builtDriverRouteArray.push(city);
+            
+            // visually display it
+            var displayString = builtDriverRouteArray.join(" ➔ ");
+            document.getElementById('builtRouteDisplay').innerHTML = "Current Route: " + displayString;
+            
+            // clear input for the next city
+            inputElem.value = "";
         }
 
-        // load it when the page opens
-        refreshDatabaseList();
+        let searchCoords = {
+            pickup: { name: "", lat: 0, lon: 0 },
+            dropoff: { name: "", lat: 0, lon: 0 }
+        };
+        let autocompleteTimeout = null;
+
+        async function handleAutocomplete(inputElem, type) {
+            clearTimeout(autocompleteTimeout);
+            let dropdown = document.getElementById(type + "Dropdown");
+            let query = inputElem.value;
+
+            if (query.length < 3) {
+                dropdown.style.display = "none";
+                return;
+            }
+
+            autocompleteTimeout = setTimeout(async () => {
+                dropdown.innerHTML = "<div class='autocomplete-item loading-msg'>Searching...</div>";
+                dropdown.style.display = "block";
+                
+                try {
+                    let res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&countrycodes=in&format=json&limit=5`);
+                    let data = await res.json();
+                    
+                    if (data.length === 0) {
+                        dropdown.innerHTML = "<div class='autocomplete-item error-msg'>No matches in India</div>";
+                        return;
+                    }
+
+                    dropdown.innerHTML = "";
+                    for (let i = 0; i < data.length; i++) {
+                        let div = document.createElement("div");
+                        div.className = "autocomplete-item";
+                        div.innerText = data[i].display_name;
+                        div.onclick = function() {
+                            inputElem.value = data[i].name.toUpperCase();
+                            searchCoords[type] = {
+                                name: data[i].name.toUpperCase(),
+                                lat: data[i].lat,
+                                lon: data[i].lon
+                            };
+                            dropdown.style.display = "none";
+                        };
+                        dropdown.appendChild(div);
+                    }
+                } catch (e) {
+                    dropdown.innerHTML = "<div class='autocomplete-item error-msg'>Search failed</div>";
+                }
+            }, 500);
+        }
+
+        document.addEventListener("click", function(e) {
+            if(e.target.id !== "searchPickup") document.getElementById("pickupDropdown").style.display = "none";
+            if(e.target.id !== "searchDropoff") document.getElementById("dropoffDropdown").style.display = "none";
+            if(e.target.id !== "routeBuilderInput") document.getElementById("routeDropdown").style.display = "none";
+        });
+
+        async function getOSRM(pickupLon, pickupLat, dropoffLon, dropoffLat) {
+            try {
+                let res = await fetch(`https://router.project-osrm.org/route/v1/driving/${pickupLon},${pickupLat};${dropoffLon},${dropoffLat}?overview=false`);
+                let data = await res.json();
+                if (data.code === "Ok" && data.routes.length > 0) {
+                    return {
+                        duration: Math.floor(data.routes[0].duration / 60),
+                        distance: Math.floor(data.routes[0].distance / 1000)
+                    };
+                }
+            } catch(e) {}
+            return { duration: 120, distance: 100 }; // fallback
+        }
 
         // send new driver info to cpp
         async function sendDriverToDatabase() {
             var inputName = document.getElementById('newDriverName').value;
-            var inputRoute = document.getElementById('newDriverRoute').value;
             var inputDate = document.getElementById('newDriverDate').value;
             var inputTime = document.getElementById('newDriverTime').value;
             var inputCar = document.getElementById('newDriverCar').value;
 
-            if (inputName == "" || inputRoute == "" || inputTime == "") {
-                alert("Please fill in all the driver details.");
+            if (inputName == "" || builtDriverRouteArray.length < 2 || inputTime == "") {
+                alert("Please fill in all details and ensure your route has at least 2 cities.");
                 return;
             }
+            
+            // convert array into comma string for C++
+            var commaRouteString = builtDriverRouteArray.join(",");
 
             try {
-                await fetch(`http://localhost:8080/api/add?nameInput=${inputName}&routeInput=${inputRoute}&dateInput=${inputDate}&startInput=${inputTime}&carInput=${inputCar}`);
-                refreshDatabaseList();
-
+                await fetch(`http://localhost:8080/api/add?nameInput=${inputName}&routeInput=${commaRouteString}&dateInput=${inputDate}&startInput=${inputTime}&carInput=${inputCar}`);
+                
                 // clear the boxes after saving
                 document.getElementById('newDriverName').value = "";
-                document.getElementById('newDriverRoute').value = "";
                 document.getElementById('newDriverTime').value = "";
+                
+                // reset array
+                builtDriverRouteArray = [];
+                document.getElementById('builtRouteDisplay').innerHTML = "Current Route: [Empty]";
+                
+                alert("Driver saved successfully!");
             } catch (error) {
                 alert("Error: Cannot connect to C++ backend.");
             }
+        }
+
+        // format fallback math to show readable AM PM
+        function formatTimeAMPM(timeInMinutes) {
+            let hours = Math.floor(timeInMinutes / 60);
+            let minutes = timeInMinutes % 60;
+            let ampmIndicator = "AM";
+            if (hours >= 12) {
+                ampmIndicator = "PM";
+            }
+            hours = hours % 12; 
+            if (hours == 0) {
+                hours = 12;
+            }
+            let minuteString = "";
+            if (minutes < 10) {
+                minuteString = "0" + minutes;
+            } else {
+                minuteString = "" + minutes;
+            }
+            return hours + ":" + minuteString + " " + ampmIndicator;
         }
 
         // search logic
@@ -465,7 +648,6 @@
             var time = document.getElementById('searchTime').value;
             var resultsBox = document.getElementById('resultsArea');
 
-            // Sanitize or adjust based on old code requiring uppercase
             pickup = pickup.toUpperCase();
             dropoff = dropoff.toUpperCase();
 
@@ -474,27 +656,69 @@
                 return;
             }
 
-            resultsBox.innerHTML = "<div class='loading-msg'>Searching for best rides...</div>";
+            if(searchCoords.pickup.name !== pickup || searchCoords.dropoff.name !== dropoff) {
+                alert("Please select the Indian cities from the dropdown list to pull live GPS coordinates.");
+                return;
+            }
+
+            resultsBox.innerHTML = "<div class='loading-msg'>Searching live database matching...</div>";
 
             try {
-                // URL calls match the new full variable names in C++
                 let serverResponse = await fetch(`http://localhost:8080/api/search?pickupLocation=${pickup}&dropoffLocation=${dropoff}&travelDate=${date}&preferredTime=${time}`);
                 let matchArray = await serverResponse.json();
+
+                if (matchArray.length == 0) {
+                    resultsBox.innerHTML = "<div class='error-msg'>⚠ No matching rides found on requested route.</div>";
+                    return;
+                }
+
+                resultsBox.innerHTML = "<div class='loading-msg'>Validating matching routes on live map and calculating traffic...</div>";
+                
+                let osrmData = await getOSRM(searchCoords.pickup.lon, searchCoords.pickup.lat, searchCoords.dropoff.lon, searchCoords.dropoff.lat);
+                let sharedTravelMinutes = osrmData.duration;
+                let sharedDistanceKm = osrmData.distance;
+
+                // Process Drivers with simple logic
+                for (var i = 0; i < matchArray.length; i++) {
+                    var currentMatch = matchArray[i];
+
+                    let travelToPickupMinutes = currentMatch.pickupIndex * 45; 
+                    
+                    let calculatedEtaMinutes = currentMatch.driverStartMinutes + travelToPickupMinutes;
+                    let timeDifference = Math.abs(calculatedEtaMinutes - currentMatch.requestedMinutes);
+                    
+                    let pricePerMinute = 5; 
+                    if (currentMatch.carType == "Hatchback") {
+                        pricePerMinute = 4;
+                    } else if (currentMatch.carType == "SUV") {
+                        pricePerMinute = 7;
+                    }
+                    
+                    let calculatedPrice = 50 + (sharedTravelMinutes * pricePerMinute); 
+                    let dropoffEtaMinutes = calculatedEtaMinutes + sharedTravelMinutes;
+
+                    let compatibilityScore = 100 - (currentMatch.extraStops * 5) - Math.floor(timeDifference / 5) - (Math.abs(currentMatch.daysDifference) * 25);
+                    if (compatibilityScore < 0) {
+                        compatibilityScore = 0; 
+                    }
+                    
+                    currentMatch.calculatedPrice = calculatedPrice;
+                    currentMatch.compatibilityScore = compatibilityScore;
+                    currentMatch.pickupEtaFormatted = formatTimeAMPM(calculatedEtaMinutes);
+                    currentMatch.dropoffEtaFormatted = formatTimeAMPM(dropoffEtaMinutes);
+                    currentMatch.sharedDistanceKm = sharedDistanceKm;
+                    currentMatch.sharedTravelMinutes = sharedTravelMinutes;
+                }
 
                 // manual sorting algorithm 
                 for (var i = 0; i < matchArray.length; i++) {
                     for (var j = i + 1; j < matchArray.length; j++) {
-                        if (matchArray[j].matchScore > matchArray[i].matchScore) {
+                        if (matchArray[j].compatibilityScore > matchArray[i].compatibilityScore) {
                             var temporaryHolder = matchArray[i];
                             matchArray[i] = matchArray[j];
                             matchArray[j] = temporaryHolder;
                         }
                     }
-                }
-
-                if (matchArray.length == 0) {
-                    resultsBox.innerHTML = "<div class='error-msg'>⚠ No matching rides found.</div>";
-                    return;
                 }
 
                 var finalHtml = "";
@@ -514,15 +738,15 @@
                         <span style="color:var(--text-secondary); font-size:0.9em;">(${dayNote}) • ${currentMatch.carType}</span>
                     </div>
                     <div style="margin-bottom: 8px; font-size: 0.95em;">
-                        Match Score: <span class="highlight-score">${currentMatch.matchScore}%</span> | 
-                        Fare: <span class="highlight-fare">Rs ${currentMatch.totalPrice}</span>
+                        Match Score: <span class="highlight-score">${currentMatch.compatibilityScore}%</span> | 
+                        Fare: <span class="highlight-fare">Rs ${currentMatch.calculatedPrice}</span>
                     </div>
                     <div style="margin-bottom: 8px; font-size: 0.9em; color: var(--text-secondary);">
-                        Shared Route: <span style="color:var(--text-primary); font-weight:500;">${currentMatch.sharedPath}</span>
+                        Shared Route: <span style="color:var(--text-primary); font-weight:500;">${currentMatch.sharedPath}</span> <span style="font-size:0.85em; color:var(--accent-primary)">(${currentMatch.sharedDistanceKm} km / ~${currentMatch.sharedTravelMinutes} mins via active roads)</span>
                     </div>
                     <div style="font-size: 0.9em; margin-bottom: 12px; color: var(--text-secondary);">
-                        Pickup ETA: <span class="highlight-pickup">${currentMatch.pickupEta}</span> | 
-                        Dropoff ETA: <span class="highlight-dropoff">${currentMatch.dropoffEta}</span>
+                        Pickup ETA: <span class="highlight-pickup">${currentMatch.pickupEtaFormatted}</span> | 
+                        Dropoff ETA: <span class="highlight-dropoff">${currentMatch.dropoffEtaFormatted}</span>
                     </div>
                     <button onclick="openBookingForm('${currentMatch.driverName}')" style="padding: 10px; font-size: 0.9rem; background-color: var(--card-bg); border: 1px solid var(--card-border); color: var(--accent-primary);">Book Ride</button>
                 </div>`;
@@ -530,7 +754,7 @@
                 resultsBox.innerHTML = finalHtml;
 
             } catch (error) {
-                resultsBox.innerHTML = "<div class='error-msg'>⚠ Error: C++ server is not responding.</div>";
+                resultsBox.innerHTML = "<div class='error-msg'>⚠ Error: Mapping APIs or Server Offline.</div>";
             }
         }
 
@@ -559,9 +783,26 @@
                 return;
             }
 
+            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            var phoneRegex = /^\+?\d{10,15}$/;
+
+            if (!phoneRegex.test(contact)) {
+                alert("Please enter a valid phone number (10-15 digits).");
+                return;
+            }
+
+            if (!emailRegex.test(email)) {
+                alert("Please enter a valid email address.");
+                return;
+            }
+
             try {
-                // Ensure spaces are properly encoded for URL query string manually
-                await fetch(`http://localhost:8080/api/book?passengerName=${passName}&contactNumber=${contact}&emailAddress=${email}&travelDate=${date}&passengerCount=${count}&driverName=${driverName}`);
+                let bookingResponse = await fetch(`http://localhost:8080/api/book?passengerName=${passName}&contactNumber=${contact}&emailAddress=${email}&travelDate=${date}&passengerCount=${count}&driverName=${driverName}`);
+                let bookingMessage = await bookingResponse.text();
+                if (bookingMessage === "NoSeats") {
+                    alert("Not enough seats available in this car.");
+                    return;
+                }
                 alert("Booking successful!");
                 closeBookingForm();
 
