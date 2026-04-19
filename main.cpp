@@ -3,11 +3,11 @@
 #include <string>
 #include <map>
 #include <cmath>
+#include <queue>
 #include "httplib.h"
 
 using namespace std;
 
-// Student struct using full, clear names
 struct DriverRecord { 
     string driverName; 
     vector<string> driverRoute; 
@@ -31,14 +31,12 @@ struct UserRecord {
     string password;
 };
 
-// Backend operates as a high-speed matchmaker, passing raw strings to frontend APIs
-
-// Global variables 
 vector<DriverRecord> driverDatabase;
 vector<BookingRecord> bookingDatabase;
 vector<UserRecord> userDatabase;
 
-// calculate days from date 44-04-2211
+map<string, vector<pair<string, int>>> cityGraph;
+
 int calculateTotalDays(string dateString) {
     int year = stoi(dateString.substr(0, 4));
     int month = stoi(dateString.substr(5, 2));
@@ -54,14 +52,12 @@ int calculateTotalDays(string dateString) {
     return totalDays; 
 }
 
-// find difference between 
 int getDaysDifference(string requestedDate, string driverDate) {
     int reqDays = calculateTotalDays(requestedDate);
     int driverDays = calculateTotalDays(driverDate);
     return driverDays - reqDays;
 }
 
-// Format 1430 into ampm form
 string formatTimeAMPM(int timeInMinutes) {
     int hours = timeInMinutes / 100; 
     int minutes = timeInMinutes % 100;
@@ -84,7 +80,116 @@ string formatTimeAMPM(int timeInMinutes) {
     return to_string(hours) + ":" + minuteString + " " + ampmIndicator;
 }
 
+void buildCityGraph() {
+    cityGraph["DELHI"].push_back({"GURGAON", 30});
+    cityGraph["GURGAON"].push_back({"DELHI", 30});
+    
+    cityGraph["DELHI"].push_back({"NOIDA", 25});
+    cityGraph["NOIDA"].push_back({"DELHI", 25});
+
+    cityGraph["DELHI"].push_back({"PANIPAT", 85});
+    cityGraph["PANIPAT"].push_back({"DELHI", 85});
+
+    cityGraph["DELHI"].push_back({"CHANDIGARH", 240});
+    cityGraph["CHANDIGARH"].push_back({"DELHI", 240});
+
+    cityGraph["PANIPAT"].push_back({"AMBALA", 110});
+    cityGraph["AMBALA"].push_back({"PANIPAT", 110});
+
+    cityGraph["AMBALA"].push_back({"CHANDIGARH", 50});
+    cityGraph["CHANDIGARH"].push_back({"AMBALA", 50});
+
+    cityGraph["GURGAON"].push_back({"JAIPUR", 240});
+    cityGraph["JAIPUR"].push_back({"GURGAON", 240});
+
+    cityGraph["JAIPUR"].push_back({"AJMER", 135});
+    cityGraph["AJMER"].push_back({"JAIPUR", 135});
+
+    cityGraph["AJMER"].push_back({"UDAIPUR", 265});
+    cityGraph["UDAIPUR"].push_back({"AJMER", 265});
+
+    cityGraph["UDAIPUR"].push_back({"AHMEDABAD", 260});
+    cityGraph["AHMEDABAD"].push_back({"UDAIPUR", 260});
+
+    cityGraph["NOIDA"].push_back({"AGRA", 190});
+    cityGraph["AGRA"].push_back({"NOIDA", 190});
+
+    cityGraph["AGRA"].push_back({"MATHURA", 55});
+    cityGraph["MATHURA"].push_back({"AGRA", 55});
+
+    cityGraph["MATHURA"].push_back({"DELHI", 160});
+    cityGraph["DELHI"].push_back({"MATHURA", 160});
+
+    cityGraph["AGRA"].push_back({"GWALIOR", 120});
+    cityGraph["GWALIOR"].push_back({"AGRA", 120});
+
+    cityGraph["AGRA"].push_back({"KANPUR", 280});
+    cityGraph["KANPUR"].push_back({"AGRA", 280});
+
+    cityGraph["KANPUR"].push_back({"LUCKNOW", 90});
+    cityGraph["LUCKNOW"].push_back({"KANPUR", 90});
+
+    cityGraph["MUMBAI"].push_back({"PUNE", 150});
+    cityGraph["PUNE"].push_back({"MUMBAI", 150});
+
+    cityGraph["PUNE"].push_back({"LONAVALA", 65});
+    cityGraph["LONAVALA"].push_back({"PUNE", 65});
+
+    cityGraph["LONAVALA"].push_back({"MUMBAI", 85});
+    cityGraph["MUMBAI"].push_back({"LONAVALA", 85});
+    
+    cityGraph["SURAT"].push_back({"MUMBAI", 280});
+    cityGraph["MUMBAI"].push_back({"SURAT", 280});
+
+    cityGraph["AHMEDABAD"].push_back({"SURAT", 265});
+    cityGraph["SURAT"].push_back({"AHMEDABAD", 265});
+}
+
+int getGraphDistance(string startNode, string endNode) {
+    if (startNode == endNode) return 0;
+    if (cityGraph.find(startNode) == cityGraph.end() || cityGraph.find(endNode) == cityGraph.end()) {
+        return 100; 
+    }
+
+    map<string, int> distances;
+    for (auto const& pair : cityGraph) {
+        distances[pair.first] = 1000000; 
+    }
+    
+    distances[startNode] = 0;
+    
+    priority_queue<pair<int, string>, vector<pair<int, string>>, greater<pair<int, string>>> pq;
+    pq.push({0, startNode});
+
+    while (!pq.empty()) {
+        int currentDist = pq.top().first;
+        string currentCity = pq.top().second;
+        pq.pop();
+
+        if (currentCity == endNode) {
+            return currentDist;
+        }
+
+        if (currentDist > distances[currentCity]) {
+            continue;
+        }
+
+        for (auto const& neighbor : cityGraph[currentCity]) {
+            string nextCity = neighbor.first;
+            int weight = neighbor.second;
+
+            if (currentDist + weight < distances[nextCity]) {
+                distances[nextCity] = currentDist + weight;
+                pq.push({distances[nextCity], nextCity});
+            }
+        }
+    }
+
+    return 100; 
+}
+
 void loadInitialData() {
+    buildCityGraph();
     driverDatabase.push_back({"Madhvan", {"DELHI", "GURGAON", "JAIPUR", "AJMER"}, "2026-04-19", 800, 1200, "SUV"});
     driverDatabase.push_back({"Neha", {"CHANDIGARH", "PANIPAT", "DELHI", "NOIDA"}, "2026-04-20", 900, 1100, "Sedan"});
     driverDatabase.push_back({"Rahul", {"NOIDA", "AGRA", "KANPUR", "LUCKNOW"}, "2026-04-21", 700, 1000, "Hatchback"});
@@ -96,7 +201,6 @@ void loadInitialData() {
     driverDatabase.push_back({"Rapid Rachel", {"CHANDIGARH", "AMBALA", "DELHI", "GURGAON"}, "2026-04-19", 700, 1000, "SUV"});
     driverDatabase.push_back({"Lightning Luke", {"PUNE", "LONAVALA", "MUMBAI", "SURAT"}, "2026-04-24", 900, 1200, "Hatchback"});
 
-    // default student
     userDatabase.push_back({"student", "password123"});
 }
 
@@ -145,7 +249,6 @@ string buildBookingsJSON() {
     return finalJson;
 }
 
-// algorithm
 string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requestedDate, int requestedTimeFormat) {
     int requestedMinutes = (requestedTimeFormat / 100) * 60 + (requestedTimeFormat % 100);
     string resultJson = "[";
@@ -157,7 +260,6 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
         int pickupIndex = -1;
         int dropoffIndex = -1;
         
-        // Find if the pickup and dropoff nodes exist in this driver's route
         for (int j = 0; j < currentDriver.driverRoute.size(); j++) {
             if (currentDriver.driverRoute[j] == pickupNode) {
                 pickupIndex = j;
@@ -167,7 +269,6 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             }
         }
 
-        // If both nodes are found and pickup comes before dropoff
         if (pickupIndex != -1 && dropoffIndex != -1 && pickupIndex < dropoffIndex) {
             int driverStartMinutes = (currentDriver.startTime / 100) * 60 + (currentDriver.startTime % 100);
 
@@ -181,6 +282,8 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
 
             int extraStops = currentDriver.driverRoute.size() - (dropoffIndex - pickupIndex + 1);
 
+            int calculatedGraphDistance = getGraphDistance(pickupNode, dropoffNode);
+
             if (!isFirstItem) {
                 resultJson = resultJson + ",";
             }
@@ -192,6 +295,7 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             resultJson = resultJson + "\"driverStartMinutes\":" + to_string(driverStartMinutes) + ",";
             resultJson = resultJson + "\"requestedMinutes\":" + to_string(requestedMinutes) + ",";
             resultJson = resultJson + "\"extraStops\":" + to_string(extraStops) + ",";
+            resultJson = resultJson + "\"sharedDistanceKm\":" + to_string(calculatedGraphDistance) + ",";
             resultJson = resultJson + "\"pickupIndex\":" + to_string(pickupIndex) + ",";
             resultJson = resultJson + "\"travelDate\":\"" + currentDriver.travelDate + "\",";
             resultJson = resultJson + "\"startNode\":\"" + currentDriver.driverRoute[0] + "\"";
@@ -239,7 +343,6 @@ int main() {
         response.set_content("Failed", "text/plain");
     });
 
-    // Search Endpoint
     localServer.Get("/api/search", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*"); 
         
@@ -247,7 +350,6 @@ int main() {
         string dropoffInput = request.get_param_value("dropoffLocation");
         string dateInput = request.get_param_value("travelDate");
         
-        // read HTML time string "HH:MM" using simple substr instead of sscanf
         string timeString = request.get_param_value("preferredTime");
         int hours = stoi(timeString.substr(0, 2));
         int minutes = stoi(timeString.substr(3, 2));
@@ -257,13 +359,11 @@ int main() {
         response.set_content(finalResult, "application/json");
     });
 
-    // Get Database Endpoint
     localServer.Get("/api/drivers", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
         response.set_content(buildDriversJSON(), "application/json");
     });
 
-    // Add Driver Endpoint
     localServer.Get("/api/add", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
         
@@ -272,13 +372,11 @@ int main() {
         string newDate = request.get_param_value("dateInput");
         string newCar = request.get_param_value("carInput"); 
         
-        // parse HTML time string manually
         string timeString = request.get_param_value("startInput");
         int hours = stoi(timeString.substr(0, 2));
         int minutes = stoi(timeString.substr(3, 2));
         int newStartTime = (hours * 100) + minutes;
         
-        // manual split of the comma separated string
         vector<string> finalRouteArray;
         string temporaryString = "";
         
@@ -296,18 +394,15 @@ int main() {
             finalRouteArray.push_back(temporaryString);
         }
 
-        // Add to global vector
         driverDatabase.push_back({newName, finalRouteArray, newDate, newStartTime, 0, newCar});
         response.set_content("Success", "text/plain");
     });
 
-    // Get Bookings Endpoint
     localServer.Get("/api/bookings", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
         response.set_content(buildBookingsJSON(), "application/json");
     });
 
-    // Add Booking Endpoint
     localServer.Get("/api/book", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
         
