@@ -1,0 +1,2 @@
+student,password123,DRIVER
+1234,1234,DRIVER

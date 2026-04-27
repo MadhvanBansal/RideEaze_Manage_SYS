@@ -2,8 +2,9 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <cmath>
 #include <queue>
+#include <fstream>
+#include <sstream>
 #include "httplib.h"
 
 using namespace std;
@@ -24,17 +25,27 @@ struct BookingRecord {
     string travelDate;
     string passengerCount;
     string driverName;
+    string accountUsername;
 };
 
 struct UserRecord {
     string username;
     string password;
+    string accountType;
 };
 
 vector<DriverRecord> driverDatabase;
 vector<BookingRecord> bookingDatabase;
 vector<UserRecord> userDatabase;
 
+struct DriverStats {
+    float totalScore;
+    int ratingCount;
+    float averageRating;
+    int ridesAccepted;
+};
+
+map<string, DriverStats> driverProfileDB;
 map<string, vector<pair<string, int>>> cityGraph;
 
 int calculateTotalDays(string dateString) {
@@ -201,7 +212,11 @@ void loadInitialData() {
     driverDatabase.push_back({"Rapid Rachel", {"CHANDIGARH", "AMBALA", "DELHI", "GURGAON"}, "2026-04-19", 700, 1000, "SUV"});
     driverDatabase.push_back({"Lightning Luke", {"PUNE", "LONAVALA", "MUMBAI", "SURAT"}, "2026-04-24", 900, 1200, "Hatchback"});
 
-    userDatabase.push_back({"student", "password123"});
+    userDatabase.push_back({"student", "password123", "DRIVER"});
+    
+    for (int i = 0; i < driverDatabase.size(); i++) {
+        driverProfileDB[driverDatabase[i].driverName] = {40.0, 10, 4.0, 15};
+    }
 }
 
 
@@ -231,12 +246,16 @@ string buildDriversJSON() {
 }
 
 
-string buildBookingsJSON() {
+string buildBookingsJSON(string targetUser) {
     string finalJson = "[";
+    bool first = true;
     for(int i = 0; i < bookingDatabase.size(); i++) {
-        if(i > 0) {
+        if(bookingDatabase[i].accountUsername != targetUser && targetUser != "admin") continue;
+        
+        if(!first) {
             finalJson = finalJson + ",";
         }
+        first = false;
         
         finalJson = finalJson + "{\"passengerName\":\"" + bookingDatabase[i].passengerName + "\", ";
         finalJson = finalJson + "\"contactNumber\":\"" + bookingDatabase[i].contactNumber + "\", ";
@@ -283,19 +302,28 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             int extraStops = currentDriver.driverRoute.size() - (dropoffIndex - pickupIndex + 1);
 
             int calculatedGraphDistance = getGraphDistance(pickupNode, dropoffNode);
+            int daysDifference = getDaysDifference(requestedDate, currentDriver.travelDate);
 
             if (!isFirstItem) {
                 resultJson = resultJson + ",";
             }
             
             resultJson = resultJson + "{";
+            
+            float avgRating = 4.0;
+            if (driverProfileDB.find(currentDriver.driverName) != driverProfileDB.end()) {
+                avgRating = driverProfileDB[currentDriver.driverName].averageRating;
+            }
+            
             resultJson = resultJson + "\"driverName\":\"" + currentDriver.driverName + "\",";
+            resultJson = resultJson + "\"rating\":" + to_string(avgRating) + ",";
             resultJson = resultJson + "\"sharedPath\":\"" + sharedPathString + "\",";
             resultJson = resultJson + "\"carType\":\"" + currentDriver.carType + "\",";
             resultJson = resultJson + "\"driverStartMinutes\":" + to_string(driverStartMinutes) + ",";
             resultJson = resultJson + "\"requestedMinutes\":" + to_string(requestedMinutes) + ",";
             resultJson = resultJson + "\"extraStops\":" + to_string(extraStops) + ",";
             resultJson = resultJson + "\"sharedDistanceKm\":" + to_string(calculatedGraphDistance) + ",";
+            resultJson = resultJson + "\"daysDifference\":" + to_string(daysDifference) + ",";
             resultJson = resultJson + "\"pickupIndex\":" + to_string(pickupIndex) + ",";
             resultJson = resultJson + "\"travelDate\":\"" + currentDriver.travelDate + "\",";
             resultJson = resultJson + "\"startNode\":\"" + currentDriver.driverRoute[0] + "\"";
@@ -308,14 +336,97 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
     return resultJson;
 }
 
+vector<string> splitString(string str, char delimiter) {
+    vector<string> internal;
+    stringstream ss(str);
+    string tok;
+    while (getline(ss, tok, delimiter)) {
+        internal.push_back(tok);
+    }
+    return internal;
+}
+
+void saveUsers() {
+    ofstream file("users.txt");
+    for (int i = 0; i < userDatabase.size(); i++) {
+        file << userDatabase[i].username << "," << userDatabase[i].password << "," << userDatabase[i].accountType << "\n";
+    }
+    file.close();
+}
+
+void loadUsers() {
+    ifstream file("users.txt");
+    if (!file.is_open()) return; 
+    userDatabase.clear();
+    string line;
+    while (getline(file, line)) {
+        vector<string> parts = splitString(line, ',');
+        if (parts.size() >= 3) userDatabase.push_back({parts[0], parts[1], parts[2]});
+    }
+    file.close();
+}
+
+void saveBookings() {
+    ofstream file("bookings.txt");
+    for (int i = 0; i < bookingDatabase.size(); i++) {
+        file << bookingDatabase[i].passengerName << "," << bookingDatabase[i].contactNumber << "," 
+             << bookingDatabase[i].emailAddress << "," << bookingDatabase[i].travelDate << "," 
+             << bookingDatabase[i].passengerCount << "," << bookingDatabase[i].driverName << ","
+             << bookingDatabase[i].accountUsername << "\n";
+    }
+    file.close();
+}
+
+void loadBookings() {
+    ifstream file("bookings.txt");
+    if (!file.is_open()) return;
+    bookingDatabase.clear();
+    string line;
+    while (getline(file, line)) {
+        vector<string> parts = splitString(line, ',');
+        if (parts.size() >= 6) {
+            string accUser = (parts.size() >= 7) ? parts[6] : "unknown";
+            bookingDatabase.push_back({parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], accUser});
+        }
+    }
+    file.close();
+}
+
+void saveStats() {
+    ofstream file("driver_stats.txt");
+    for (auto const& x : driverProfileDB) {
+        file << x.first << "," << x.second.totalScore << "," << x.second.ratingCount << "," 
+             << x.second.averageRating << "," << x.second.ridesAccepted << "\n";
+    }
+    file.close();
+}
+
+void loadStats() {
+    ifstream file("driver_stats.txt");
+    if (!file.is_open()) return;
+    string line;
+    while (getline(file, line)) {
+        vector<string> parts = splitString(line, ',');
+        if (parts.size() >= 5) {
+            driverProfileDB[parts[0]] = {stof(parts[1]), stoi(parts[2]), stof(parts[3]), stoi(parts[4])};
+        }
+    }
+    file.close();
+}
+
 int main() {
     loadInitialData();
+    loadUsers();
+    loadStats();
+    loadBookings();
     httplib::Server localServer;
 
     localServer.Get("/api/signup", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
         string user = request.get_param_value("u");
         string pass = request.get_param_value("p");
+        string type = request.get_param_value("t");
+        if (type == "") type = "PASSENGER";
         
         for (int i = 0; i < userDatabase.size(); i++) {
             if (userDatabase[i].username == user) {
@@ -324,7 +435,8 @@ int main() {
             }
         }
         
-        userDatabase.push_back({user, pass});
+        userDatabase.push_back({user, pass, type});
+        saveUsers();
         response.set_content("Success", "text/plain");
     });
 
@@ -335,7 +447,7 @@ int main() {
         
         for (int i = 0; i < userDatabase.size(); i++) {
             if (userDatabase[i].username == user && userDatabase[i].password == pass) {
-                response.set_content("Success", "text/plain");
+                response.set_content("Success," + userDatabase[i].accountType, "text/plain");
                 return;
             }
         }
@@ -400,7 +512,8 @@ int main() {
 
     localServer.Get("/api/bookings", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
-        response.set_content(buildBookingsJSON(), "application/json");
+        string user = request.get_param_value("user");
+        response.set_content(buildBookingsJSON(user), "application/json");
     });
 
     localServer.Get("/api/book", [](const httplib::Request& request, httplib::Response& response) {
@@ -412,9 +525,32 @@ int main() {
         string inputTravelDate = request.get_param_value("travelDate");
         string inputPassengerCount = request.get_param_value("passengerCount");
         string inputDriverName = request.get_param_value("driverName");
+        string inputAccountUsername = request.get_param_value("accountUsername");
         
-        bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName});
+        bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName, inputAccountUsername});
         
+        driverProfileDB[inputDriverName].ridesAccepted++;
+        saveBookings();
+        saveStats();
+        
+        response.set_content("Success", "text/plain");
+    });
+
+    localServer.Get("/api/rate", [](const httplib::Request& request, httplib::Response& response) {
+        response.set_header("Access-Control-Allow-Origin", "*");
+        string driver = request.get_param_value("driver");
+        string scoreStr = request.get_param_value("score");
+        
+        if (driver != "" && scoreStr != "") {
+            float score = stof(scoreStr);
+            if (driverProfileDB.find(driver) == driverProfileDB.end()) {
+                driverProfileDB[driver] = {0, 0, 0, 0};
+            }
+            driverProfileDB[driver].totalScore += score;
+            driverProfileDB[driver].ratingCount++;
+            driverProfileDB[driver].averageRating = driverProfileDB[driver].totalScore / driverProfileDB[driver].ratingCount;
+            saveStats();
+        }
         response.set_content("Success", "text/plain");
     });
 

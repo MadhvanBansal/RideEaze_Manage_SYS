@@ -310,6 +310,14 @@
                 <label>Password</label>
                 <input type="password" id="authPassword" placeholder="Enter password">
             </div>
+            
+            <div class="input-group" id="accountTypeGroup" style="text-align: left; margin-bottom: 25px; display: none;">
+                <label>Account Type</label>
+                <select id="authAccountType" style="margin-top: 5px;">
+                    <option value="PASSENGER">Passenger</option>
+                    <option value="DRIVER">Driver</option>
+                </select>
+            </div>
 
             <button id="authBtn" onclick="submitAuth()">Sign In</button>
 
@@ -459,11 +467,13 @@
             document.getElementById('authToggleText').innerText = isLoginMode ? "New user? " : "Already registered? ";
             document.getElementById('authUsername').value = "";
             document.getElementById('authPassword').value = "";
+            document.getElementById('accountTypeGroup').style.display = isLoginMode ? "none" : "flex";
         }
 
         async function submitAuth() {
             let u = document.getElementById('authUsername').value;
             let p = document.getElementById('authPassword').value;
+            let t = document.getElementById('authAccountType').value;
 
             if (u == "" || p == "") {
                 alert("Please enter username and password.");
@@ -471,18 +481,44 @@
             }
 
             let endpoint = isLoginMode ? "/api/login" : "/api/signup";
+            let qs = `u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}`;
+            if (!isLoginMode) {
+                qs += `&t=${encodeURIComponent(t)}`;
+            }
 
             try {
-                let res = await fetch(`http://localhost:8080${endpoint}?u=${u}&p=${p}`);
+                let res = await fetch(`http://localhost:8080${endpoint}?${qs}`);
                 let msg = await res.text();
 
                 if (msg == "Exists") {
                     alert("Username already exists!");
                 } else if (msg == "Failed") {
                     alert("Invalid credentials.");
-                } else if (msg == "Success") {
+                } else if (msg.startsWith("Success")) {
+                    let parts = msg.split(",");
+                    let type = isLoginMode ? (parts[1] || "PASSENGER") : t;
+
+                    // Save session details in browser memory
+                    localStorage.setItem("loggedInUsername", u);
+                    localStorage.setItem("accountType", type);
+
                     document.getElementById('loginOverlay').style.display = "none";
                     document.getElementById('mainApp').style.display = "block";
+                    
+                    // Enforce session rules automatically
+                    document.getElementById('newDriverName').value = u;
+                    document.getElementById('newDriverName').disabled = true; // Lock the text box
+
+                    document.getElementById('bookPassName').value = u;
+                    document.getElementById('bookPassName').disabled = true; // Lock passenger box
+
+                    // If passenger, completely hide the 'Add Driver' form to prevent posting rides
+                    if (type === "PASSENGER") {
+                        let contentBoxes = document.querySelectorAll('.content-box');
+                        if (contentBoxes.length > 1) {
+                            contentBoxes[1].style.display = "none";
+                        }
+                    }
                 }
             } catch(e) {
                 alert("Cannot connect to server. Is C++ running?");
@@ -705,7 +741,8 @@
                 <div class='result-card'>
                     <div style="margin-bottom: 8px;">
                         <span class="highlight-name">${currentMatch.driverName}</span>
-                        <span style="color:var(--text-secondary); font-size:0.9em;">(${dayNote}) • ${currentMatch.carType}</span>
+                        <span style="color:var(--accent-primary); font-weight:bold; font-size: 0.9em; margin-left: 8px;">⭐ ${currentMatch.rating.toFixed(1)}/5.0</span>
+                        <span style="display:block; color:var(--text-secondary); font-size:0.9em; margin-top: 4px;">(${dayNote}) • ${currentMatch.carType}</span>
                     </div>
                     <div style="margin-bottom: 8px; font-size: 0.95em;">
                         Match Score: <span class="highlight-score">${currentMatch.compatibilityScore}%</span> |
@@ -765,8 +802,10 @@
                 return;
             }
 
+            let currentUser = localStorage.getItem("loggedInUsername");
+
             try {
-                let bookingResponse = await fetch(`http://localhost:8080/api/book?passengerName=${passName}&contactNumber=${contact}&emailAddress=${email}&travelDate=${date}&passengerCount=${count}&driverName=${driverName}`);
+                let bookingResponse = await fetch(`http://localhost:8080/api/book?passengerName=${passName}&contactNumber=${contact}&emailAddress=${email}&travelDate=${date}&passengerCount=${count}&driverName=${driverName}&accountUsername=${currentUser}`);
                 let bookingMessage = await bookingResponse.text();
                 if (bookingMessage === "NoSeats") {
                     alert("Not enough seats available in this car.");
@@ -793,26 +832,73 @@
             document.getElementById('bookingsModal').style.display = "none";
         }
 
+        async function submitRating(driverName, selectId) {
+            let score = document.getElementById(selectId).value;
+            try {
+                await fetch(`http://localhost:8080/api/rate?driver=${driverName}&score=${score}`);
+                alert("Thank you for rating " + driverName + "!");
+                document.getElementById(selectId).disabled = true;
+                event.target.disabled = true;
+                event.target.innerText = "Rated";
+            } catch(e) {
+                alert("Error saving rating.");
+            }
+        }
+
         async function fetchBookings() {
             try {
-                let response = await fetch(`http://localhost:8080/api/bookings`);
+                let currentUser = localStorage.getItem("loggedInUsername");
+                let response = await fetch(`http://localhost:8080/api/bookings?user=${currentUser}`);
                 let bookingsData = await response.json();
 
-                var output = "";
+                var upcomingOutput = "";
+                var historyOutput = "";
+                var todayStr = new Date().toISOString().split('T')[0];
+
                 for (var i = 0; i < bookingsData.length; i++) {
-                    output += `<div style="padding: 12px; background: #ffffff; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--card-border);">
+                    let isHistory = bookingsData[i].travelDate < todayStr;
+                    let block = `<div style="padding: 12px; background: #ffffff; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--card-border);">
                         <b style="color: var(--success); font-size: 1.05rem;">Passenger: ${bookingsData[i].passengerName}</b> <span style="color:var(--text-secondary)">(${bookingsData[i].passengerCount} pax)</span><br>
                         <span style="display:inline-block; margin-top:5px; color:var(--text-secondary);">Contact: <span style="color:var(--text-primary);">${bookingsData[i].contactNumber} | ${bookingsData[i].emailAddress}</span></span><br>
                         <hr>
-                        <span style="color: var(--text-secondary); font-weight: 500;">Driver: <span style="color:var(--accent-primary);">${bookingsData[i].driverName}</span></span> on <b style="color:var(--text-primary);">${bookingsData[i].travelDate}</b>
-                    </div>`;
+                        <span style="color: var(--text-secondary); font-weight: 500;">Driver: <span style="color:var(--accent-primary);">${bookingsData[i].driverName}</span></span> on <b style="color:var(--text-primary);">${bookingsData[i].travelDate}</b>`;
+                    
+                    if (isHistory) {
+                        block += `<div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <select id="rate_${i}" style="width: auto; padding: 5px; font-size: 0.9rem;">
+                                <option value="5">⭐⭐⭐⭐⭐ 5</option>
+                                <option value="4">⭐⭐⭐⭐ 4</option>
+                                <option value="3">⭐⭐⭐ 3</option>
+                                <option value="2">⭐⭐ 2</option>
+                                <option value="1">⭐ 1</option>
+                            </select>
+                            <button onclick="submitRating('${bookingsData[i].driverName}', 'rate_${i}')" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Rate Driver</button>
+                        </div>`;
+                    }
+                    
+                    block += `</div>`;
+                    
+                    if (isHistory) {
+                        historyOutput += block;
+                    } else {
+                        upcomingOutput += block;
+                    }
                 }
 
-                if (bookingsData.length === 0) {
-                    document.getElementById('bookingsListArea').innerHTML = "<span class='loading-msg'>No upcoming bookings found.</span>";
-                } else {
-                    document.getElementById('bookingsListArea').innerHTML = output;
-                }
+                let finalHtml = `
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <button onclick="document.getElementById('upcomingTab').style.display='block'; document.getElementById('historyTab').style.display='none';" style="flex: 1; padding: 10px; border-radius: 6px;">Upcoming Rides</button>
+                        <button onclick="document.getElementById('upcomingTab').style.display='none'; document.getElementById('historyTab').style.display='block';" style="flex: 1; padding: 10px; background: #475569; border-radius: 6px;">Ride History</button>
+                    </div>
+                    <div id="upcomingTab">
+                        ${upcomingOutput === "" ? "<span class='loading-msg'>No upcoming bookings found.</span>" : upcomingOutput}
+                    </div>
+                    <div id="historyTab" style="display: none;">
+                        ${historyOutput === "" ? "<span class='loading-msg'>No past bookings found.</span>" : historyOutput}
+                    </div>
+                `;
+
+                document.getElementById('bookingsListArea').innerHTML = finalHtml;
             } catch (error) {
                 document.getElementById('bookingsListArea').innerHTML = "<div class='error-msg'>⚠ Cannot load bookings. Is server running?</div>";
             }
