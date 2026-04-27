@@ -20272,4 +20272,4 @@ WebSocketClient::enable_server_certificate_verification(bool enabled) {
 
 } // namespace httplib
 
-#endif // CPPHTTPLIB_HTTPLIB_H
+#endif // CPPHTTPLIB_HTTPLIB_H 
