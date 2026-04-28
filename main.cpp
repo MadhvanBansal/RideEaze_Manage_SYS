@@ -26,6 +26,7 @@ struct BookingRecord {
     string passengerCount;
     string driverName;
     string accountUsername;
+    string isRated;
 };
 
 struct UserRecord {
@@ -250,7 +251,7 @@ string buildBookingsJSON(string targetUser) {
     string finalJson = "[";
     bool first = true;
     for(int i = 0; i < bookingDatabase.size(); i++) {
-        if(bookingDatabase[i].accountUsername != targetUser && targetUser != "admin") continue;
+        if(bookingDatabase[i].accountUsername != targetUser && bookingDatabase[i].driverName != targetUser && targetUser != "admin") continue;
         
         if(!first) {
             finalJson = finalJson + ",";
@@ -262,7 +263,8 @@ string buildBookingsJSON(string targetUser) {
         finalJson = finalJson + "\"emailAddress\":\"" + bookingDatabase[i].emailAddress + "\", ";
         finalJson = finalJson + "\"travelDate\":\"" + bookingDatabase[i].travelDate + "\", ";
         finalJson = finalJson + "\"passengerCount\":\"" + bookingDatabase[i].passengerCount + "\", ";
-        finalJson = finalJson + "\"driverName\":\"" + bookingDatabase[i].driverName + "\"}";
+        finalJson = finalJson + "\"driverName\":\"" + bookingDatabase[i].driverName + "\", ";
+        finalJson = finalJson + "\"isRated\":\"" + bookingDatabase[i].isRated + "\"}";
     }
     finalJson = finalJson + "]";
     return finalJson;
@@ -372,7 +374,7 @@ void saveBookings() {
         file << bookingDatabase[i].passengerName << "," << bookingDatabase[i].contactNumber << "," 
              << bookingDatabase[i].emailAddress << "," << bookingDatabase[i].travelDate << "," 
              << bookingDatabase[i].passengerCount << "," << bookingDatabase[i].driverName << ","
-             << bookingDatabase[i].accountUsername << "\n";
+             << bookingDatabase[i].accountUsername << "," << bookingDatabase[i].isRated << "\n";
     }
     file.close();
 }
@@ -386,7 +388,10 @@ void loadBookings() {
         vector<string> parts = splitString(line, ',');
         if (parts.size() >= 6) {
             string accUser = (parts.size() >= 7) ? parts[6] : "unknown";
-            bookingDatabase.push_back({parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], accUser});
+            string rated = (parts.size() >= 8) ? parts[7] : "false";
+            if (!rated.empty() && rated.back() == '\r') rated.pop_back();
+            if (!accUser.empty() && accUser.back() == '\r') accUser.pop_back();
+            bookingDatabase.push_back({parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], accUser, rated});
         }
     }
     file.close();
@@ -527,7 +532,7 @@ int main() {
         string inputDriverName = request.get_param_value("driverName");
         string inputAccountUsername = request.get_param_value("accountUsername");
         
-        bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName, inputAccountUsername});
+        bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName, inputAccountUsername, "false"});
         
         driverProfileDB[inputDriverName].ridesAccepted++;
         saveBookings();
@@ -538,6 +543,8 @@ int main() {
 
     localServer.Get("/api/rate", [](const httplib::Request& request, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "*");
+        string user = request.get_param_value("user");
+        string date = request.get_param_value("date");
         string driver = request.get_param_value("driver");
         string scoreStr = request.get_param_value("score");
         
@@ -550,6 +557,17 @@ int main() {
             driverProfileDB[driver].ratingCount++;
             driverProfileDB[driver].averageRating = driverProfileDB[driver].totalScore / driverProfileDB[driver].ratingCount;
             saveStats();
+
+            for (int i = 0; i < bookingDatabase.size(); i++) {
+                if (bookingDatabase[i].accountUsername == user && 
+                    bookingDatabase[i].driverName == driver && 
+                    bookingDatabase[i].travelDate == date && 
+                    bookingDatabase[i].isRated == "false") {
+                    bookingDatabase[i].isRated = "true";
+                    saveBookings();
+                    break;
+                }
+            }
         }
         response.set_content("Success", "text/plain");
     });

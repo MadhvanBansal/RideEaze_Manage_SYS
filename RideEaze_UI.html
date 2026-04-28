@@ -518,6 +518,11 @@
                         if (contentBoxes.length > 1) {
                             contentBoxes[1].style.display = "none";
                         }
+                    } else if (type === "DRIVER") {
+                        let contentBoxes = document.querySelectorAll('.content-box');
+                        if (contentBoxes.length > 0) {
+                            contentBoxes[0].style.display = "none";
+                        }
                     }
                 }
             } catch(e) {
@@ -525,7 +530,9 @@
             }
         }
 
-        var todayString = new Date().toISOString().split('T')[0];
+        let d = new Date();
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        var todayString = d.toISOString().split('T')[0];
         document.getElementById('searchDate').value = todayString;
         document.getElementById('newDriverDate').value = todayString;
 
@@ -620,7 +627,7 @@
             var commaRouteString = builtDriverRouteArray.join(",");
 
             try {
-                await fetch(`http://localhost:8080/api/add?nameInput=${inputName}&routeInput=${commaRouteString}&dateInput=${inputDate}&startInput=${inputTime}&carInput=${inputCar}`);
+                await fetch(`http://localhost:8080/api/add?nameInput=${encodeURIComponent(inputName)}&routeInput=${encodeURIComponent(commaRouteString)}&dateInput=${encodeURIComponent(inputDate)}&startInput=${encodeURIComponent(inputTime)}&carInput=${encodeURIComponent(inputCar)}`);
 
                 document.getElementById('newDriverName').value = "";
                 document.getElementById('newDriverTime').value = "";
@@ -673,7 +680,7 @@
             resultsBox.innerHTML = "<div class='loading-msg'>Searching live database matching...</div>";
 
             try {
-                let serverResponse = await fetch(`http://localhost:8080/api/search?pickupLocation=${pickup}&dropoffLocation=${dropoff}&travelDate=${date}&preferredTime=${time}`);
+                let serverResponse = await fetch(`http://localhost:8080/api/search?pickupLocation=${encodeURIComponent(pickup)}&dropoffLocation=${encodeURIComponent(dropoff)}&travelDate=${encodeURIComponent(date)}&preferredTime=${encodeURIComponent(time)}`);
                 let matchArray = await serverResponse.json();
 
                 if (matchArray.length == 0) {
@@ -805,7 +812,8 @@
             let currentUser = localStorage.getItem("loggedInUsername");
 
             try {
-                let bookingResponse = await fetch(`http://localhost:8080/api/book?passengerName=${passName}&contactNumber=${contact}&emailAddress=${email}&travelDate=${date}&passengerCount=${count}&driverName=${driverName}&accountUsername=${currentUser}`);
+                let url = `http://localhost:8080/api/book?passengerName=${encodeURIComponent(passName)}&contactNumber=${encodeURIComponent(contact)}&emailAddress=${encodeURIComponent(email)}&travelDate=${encodeURIComponent(date)}&passengerCount=${encodeURIComponent(count)}&driverName=${encodeURIComponent(driverName)}&accountUsername=${encodeURIComponent(currentUser)}`;
+                let bookingResponse = await fetch(url);
                 let bookingMessage = await bookingResponse.text();
                 if (bookingMessage === "NoSeats") {
                     alert("Not enough seats available in this car.");
@@ -832,14 +840,15 @@
             document.getElementById('bookingsModal').style.display = "none";
         }
 
-        async function submitRating(driverName, selectId) {
+        async function submitRating(driverName, travelDate, selectId, btnElem) {
             let score = document.getElementById(selectId).value;
+            let currentUser = localStorage.getItem("loggedInUsername");
             try {
-                await fetch(`http://localhost:8080/api/rate?driver=${driverName}&score=${score}`);
+                await fetch(`http://localhost:8080/api/rate?user=${encodeURIComponent(currentUser)}&driver=${encodeURIComponent(driverName)}&date=${encodeURIComponent(travelDate)}&score=${score}`);
                 alert("Thank you for rating " + driverName + "!");
                 document.getElementById(selectId).disabled = true;
-                event.target.disabled = true;
-                event.target.innerText = "Rated";
+                btnElem.disabled = true;
+                btnElem.innerText = "Rated";
             } catch(e) {
                 alert("Error saving rating.");
             }
@@ -848,12 +857,15 @@
         async function fetchBookings() {
             try {
                 let currentUser = localStorage.getItem("loggedInUsername");
-                let response = await fetch(`http://localhost:8080/api/bookings?user=${currentUser}`);
+                let accountType = localStorage.getItem("accountType");
+                let response = await fetch(`http://localhost:8080/api/bookings?user=${encodeURIComponent(currentUser)}`);
                 let bookingsData = await response.json();
 
                 var upcomingOutput = "";
                 var historyOutput = "";
-                var todayStr = new Date().toISOString().split('T')[0];
+                let d2 = new Date();
+                d2.setMinutes(d2.getMinutes() - d2.getTimezoneOffset());
+                var todayStr = d2.toISOString().split('T')[0];
 
                 for (var i = 0; i < bookingsData.length; i++) {
                     let isHistory = bookingsData[i].travelDate < todayStr;
@@ -864,16 +876,28 @@
                         <span style="color: var(--text-secondary); font-weight: 500;">Driver: <span style="color:var(--accent-primary);">${bookingsData[i].driverName}</span></span> on <b style="color:var(--text-primary);">${bookingsData[i].travelDate}</b>`;
                     
                     if (isHistory) {
-                        block += `<div style="margin-top: 10px; display: flex; gap: 10px;">
-                            <select id="rate_${i}" style="width: auto; padding: 5px; font-size: 0.9rem;">
-                                <option value="5">⭐⭐⭐⭐⭐ 5</option>
-                                <option value="4">⭐⭐⭐⭐ 4</option>
-                                <option value="3">⭐⭐⭐ 3</option>
-                                <option value="2">⭐⭐ 2</option>
-                                <option value="1">⭐ 1</option>
-                            </select>
-                            <button onclick="submitRating('${bookingsData[i].driverName}', 'rate_${i}')" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Rate Driver</button>
-                        </div>`;
+                        if (accountType === "PASSENGER") {
+                            if (bookingsData[i].isRated === "true") {
+                                block += `<div style="margin-top: 10px; color: var(--success); font-weight: 500;">✓ Rated</div>`;
+                            } else {
+                                block += `<div style="margin-top: 10px; display: flex; gap: 10px;">
+                                    <select id="rate_${i}" style="width: auto; padding: 5px; font-size: 0.9rem;">
+                                        <option value="5">⭐⭐⭐⭐⭐ 5</option>
+                                        <option value="4">⭐⭐⭐⭐ 4</option>
+                                        <option value="3">⭐⭐⭐ 3</option>
+                                        <option value="2">⭐⭐ 2</option>
+                                        <option value="1">⭐ 1</option>
+                                    </select>
+                                    <button onclick="submitRating('${bookingsData[i].driverName}', '${bookingsData[i].travelDate}', 'rate_${i}', this)" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Rate Driver</button>
+                                </div>`;
+                            }
+                        } else {
+                            if (bookingsData[i].isRated === "true") {
+                                block += `<div style="margin-top: 10px; color: var(--success); font-weight: 500;">✓ Passenger Rated You</div>`;
+                            } else {
+                                block += `<div style="margin-top: 10px; color: var(--text-secondary); font-style: italic;">Pending Passenger Rating</div>`;
+                            }
+                        }
                     }
                     
                     block += `</div>`;
