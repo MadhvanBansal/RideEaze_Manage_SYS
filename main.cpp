@@ -5,6 +5,8 @@
 #include <queue>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
+#include <cmath>
 #include "httplib.h"
 
 using namespace std;
@@ -26,7 +28,6 @@ struct BookingRecord {
     string passengerCount;
     string driverName;
     string accountUsername;
-    string isRated;
 };
 
 struct UserRecord {
@@ -39,14 +40,27 @@ vector<DriverRecord> driverDatabase;
 vector<BookingRecord> bookingDatabase;
 vector<UserRecord> userDatabase;
 
-struct DriverStats {
-    float totalScore;
-    int ratingCount;
-    float averageRating;
-    int ridesAccepted;
+
+struct MatchResult {
+    string driverName;
+    string sharedPath;
+    string carType;
+    int driverStartMinutes;
+    int requestedMinutes;
+    int extraStops;
+    int sharedDistanceKm;
+    int daysDifference;
+    int pickupIndex;
+    string travelDate;
+    string startNode;
+    
+    int calculatedPrice;
+    int compatibilityScore;
+    string pickupEtaFormatted;
+    string dropoffEtaFormatted;
+    int sharedTravelMinutes;
 };
 
-map<string, DriverStats> driverProfileDB;
 map<string, vector<pair<string, int>>> cityGraph;
 
 int calculateTotalDays(string dateString) {
@@ -202,22 +216,20 @@ int getGraphDistance(string startNode, string endNode) {
 
 void loadInitialData() {
     buildCityGraph();
-    driverDatabase.push_back({"Madhvan", {"DELHI", "GURGAON", "JAIPUR", "AJMER"}, "2026-04-19", 800, 1200, "SUV"});
-    driverDatabase.push_back({"Neha", {"CHANDIGARH", "PANIPAT", "DELHI", "NOIDA"}, "2026-04-20", 900, 1100, "Sedan"});
-    driverDatabase.push_back({"Rahul", {"NOIDA", "AGRA", "KANPUR", "LUCKNOW"}, "2026-04-21", 700, 1000, "Hatchback"});
-    driverDatabase.push_back({"Speedy John", {"JAIPUR", "AJMER", "UDAIPUR", "AHMEDABAD"}, "2026-04-19", 830, 1300, "Hatchback"});
-    driverDatabase.push_back({"Cruise Sarah", {"GURGAON", "DELHI", "NOIDA", "AGRA"}, "2026-04-20", 1000, 1400, "Sedan"});
-    driverDatabase.push_back({"Big Mike", {"MUMBAI", "PUNE", "LONAVALA"}, "2026-04-22", 600, 1500, "SUV"});
-    driverDatabase.push_back({"Turbo Tom", {"DELHI", "MATHURA", "AGRA", "GWALIOR"}, "2026-04-21", 1100, 1600, "Sedan"});
-    driverDatabase.push_back({"Drift Dave", {"LUCKNOW", "KANPUR", "AGRA", "NOIDA"}, "2026-04-23", 1400, 1800, "Hatchback"});
-    driverDatabase.push_back({"Rapid Rachel", {"CHANDIGARH", "AMBALA", "DELHI", "GURGAON"}, "2026-04-19", 700, 1000, "SUV"});
-    driverDatabase.push_back({"Lightning Luke", {"PUNE", "LONAVALA", "MUMBAI", "SURAT"}, "2026-04-24", 900, 1200, "Hatchback"});
+    driverDatabase.push_back({"Madhvan", {"DELHI", "GURGAON", "JAIPUR", "AJMER"}, "2026-05-02", 800, 1200, "SUV"});
+    driverDatabase.push_back({"Neha", {"CHANDIGARH", "PANIPAT", "DELHI", "NOIDA"}, "2026-05-03", 900, 1100, "Sedan"});
+    driverDatabase.push_back({"Rahul", {"NOIDA", "AGRA", "KANPUR", "LUCKNOW"}, "2026-05-04", 700, 1000, "Hatchback"});
+    driverDatabase.push_back({"Speedy John", {"JAIPUR", "AJMER", "UDAIPUR", "AHMEDABAD"}, "2026-04-28", 830, 1300, "Hatchback"});
+    driverDatabase.push_back({"Cruise Sarah", {"GURGAON", "DELHI", "NOIDA", "AGRA"}, "2026-05-05", 1000, 1400, "Sedan"});
+    driverDatabase.push_back({"Big Mike", {"MUMBAI", "PUNE", "LONAVALA"}, "2026-05-06", 600, 1500, "SUV"});
+    driverDatabase.push_back({"Turbo Tom", {"DELHI", "MATHURA", "AGRA", "GWALIOR"}, "2026-04-29", 1100, 1600, "Sedan"});
+    driverDatabase.push_back({"Drift Dave", {"LUCKNOW", "KANPUR", "AGRA", "NOIDA"}, "2026-05-07", 1400, 1800, "Hatchback"});
+    driverDatabase.push_back({"Rapid Rachel", {"CHANDIGARH", "AMBALA", "DELHI", "GURGAON"}, "2026-05-01", 700, 1000, "SUV"});
+    driverDatabase.push_back({"Lightning Luke", {"PUNE", "LONAVALA", "MUMBAI", "SURAT"}, "2026-05-10", 900, 1200, "Hatchback"});
 
     userDatabase.push_back({"student", "password123", "DRIVER"});
     
-    for (int i = 0; i < driverDatabase.size(); i++) {
-        driverProfileDB[driverDatabase[i].driverName] = {40.0, 10, 4.0, 15};
-    }
+
 }
 
 
@@ -263,8 +275,7 @@ string buildBookingsJSON(string targetUser) {
         finalJson = finalJson + "\"emailAddress\":\"" + bookingDatabase[i].emailAddress + "\", ";
         finalJson = finalJson + "\"travelDate\":\"" + bookingDatabase[i].travelDate + "\", ";
         finalJson = finalJson + "\"passengerCount\":\"" + bookingDatabase[i].passengerCount + "\", ";
-        finalJson = finalJson + "\"driverName\":\"" + bookingDatabase[i].driverName + "\", ";
-        finalJson = finalJson + "\"isRated\":\"" + bookingDatabase[i].isRated + "\"}";
+        finalJson = finalJson + "\"driverName\":\"" + bookingDatabase[i].driverName + "\"}";
     }
     finalJson = finalJson + "]";
     return finalJson;
@@ -272,8 +283,7 @@ string buildBookingsJSON(string targetUser) {
 
 string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requestedDate, int requestedTimeFormat) {
     int requestedMinutes = (requestedTimeFormat / 100) * 60 + (requestedTimeFormat % 100);
-    string resultJson = "[";
-    bool isFirstItem = true;
+    vector<MatchResult> matches;
 
     for (int i = 0; i < driverDatabase.size(); i++) {
         DriverRecord currentDriver = driverDatabase[i];
@@ -302,39 +312,83 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             }
 
             int extraStops = currentDriver.driverRoute.size() - (dropoffIndex - pickupIndex + 1);
-
             int calculatedGraphDistance = getGraphDistance(pickupNode, dropoffNode);
             int daysDifference = getDaysDifference(requestedDate, currentDriver.travelDate);
 
-            if (!isFirstItem) {
-                resultJson = resultJson + ",";
+
+            int travelToPickupMinutes = pickupIndex * 45;
+            int calculatedEtaMinutes = driverStartMinutes + travelToPickupMinutes;
+            int timeDifference = abs(calculatedEtaMinutes - requestedMinutes);
+
+            int pricePerMinute = 5;
+            if (currentDriver.carType == "Hatchback") {
+                pricePerMinute = 4;
+            } else if (currentDriver.carType == "SUV") {
+                pricePerMinute = 7;
             }
-            
-            resultJson = resultJson + "{";
-            
-            float avgRating = 4.0;
-            if (driverProfileDB.find(currentDriver.driverName) != driverProfileDB.end()) {
-                avgRating = driverProfileDB[currentDriver.driverName].averageRating;
+
+            int sharedTravelMinutes = floor(calculatedGraphDistance * 1.5);
+            int calculatedPrice = 50 + (sharedTravelMinutes * pricePerMinute);
+            int dropoffEtaMinutes = calculatedEtaMinutes + sharedTravelMinutes;
+
+            int compatibilityScore = 100 - (extraStops * 5) - floor(timeDifference / 5.0) - (abs(daysDifference) * 25);
+            if (compatibilityScore < 0) {
+                compatibilityScore = 0;
             }
+
+            MatchResult match;
+            match.driverName = currentDriver.driverName;
+            match.sharedPath = sharedPathString;
+            match.carType = currentDriver.carType;
+            match.driverStartMinutes = driverStartMinutes;
+            match.requestedMinutes = requestedMinutes;
+            match.extraStops = extraStops;
+            match.sharedDistanceKm = calculatedGraphDistance;
+            match.daysDifference = daysDifference;
+            match.pickupIndex = pickupIndex;
+            match.travelDate = currentDriver.travelDate;
+            match.startNode = currentDriver.driverRoute[0];
+            match.calculatedPrice = calculatedPrice;
+            match.compatibilityScore = compatibilityScore;
+            match.pickupEtaFormatted = formatTimeAMPM(calculatedEtaMinutes);
+            match.dropoffEtaFormatted = formatTimeAMPM(dropoffEtaMinutes);
+            match.sharedTravelMinutes = sharedTravelMinutes;
             
-            resultJson = resultJson + "\"driverName\":\"" + currentDriver.driverName + "\",";
-            resultJson = resultJson + "\"rating\":" + to_string(avgRating) + ",";
-            resultJson = resultJson + "\"sharedPath\":\"" + sharedPathString + "\",";
-            resultJson = resultJson + "\"carType\":\"" + currentDriver.carType + "\",";
-            resultJson = resultJson + "\"driverStartMinutes\":" + to_string(driverStartMinutes) + ",";
-            resultJson = resultJson + "\"requestedMinutes\":" + to_string(requestedMinutes) + ",";
-            resultJson = resultJson + "\"extraStops\":" + to_string(extraStops) + ",";
-            resultJson = resultJson + "\"sharedDistanceKm\":" + to_string(calculatedGraphDistance) + ",";
-            resultJson = resultJson + "\"daysDifference\":" + to_string(daysDifference) + ",";
-            resultJson = resultJson + "\"pickupIndex\":" + to_string(pickupIndex) + ",";
-            resultJson = resultJson + "\"travelDate\":\"" + currentDriver.travelDate + "\",";
-            resultJson = resultJson + "\"startNode\":\"" + currentDriver.driverRoute[0] + "\"";
-            resultJson = resultJson + "}";
-            
-            isFirstItem = false;
+            matches.push_back(match);
         }
     }
-    resultJson = resultJson + "]";
+
+
+    sort(matches.begin(), matches.end(), [](const MatchResult& a, const MatchResult& b) {
+        return a.compatibilityScore > b.compatibilityScore;
+    });
+
+
+    string resultJson = "[";
+    bool isFirstItem = true;
+    for (int i = 0; i < matches.size(); i++) {
+        if (!isFirstItem) resultJson += ",";
+        resultJson += "{";
+        resultJson += "\"driverName\":\"" + matches[i].driverName + "\",";
+        resultJson += "\"sharedPath\":\"" + matches[i].sharedPath + "\",";
+        resultJson += "\"carType\":\"" + matches[i].carType + "\",";
+        resultJson += "\"driverStartMinutes\":" + to_string(matches[i].driverStartMinutes) + ",";
+        resultJson += "\"requestedMinutes\":" + to_string(matches[i].requestedMinutes) + ",";
+        resultJson += "\"extraStops\":" + to_string(matches[i].extraStops) + ",";
+        resultJson += "\"sharedDistanceKm\":" + to_string(matches[i].sharedDistanceKm) + ",";
+        resultJson += "\"daysDifference\":" + to_string(matches[i].daysDifference) + ",";
+        resultJson += "\"pickupIndex\":" + to_string(matches[i].pickupIndex) + ",";
+        resultJson += "\"travelDate\":\"" + matches[i].travelDate + "\",";
+        resultJson += "\"startNode\":\"" + matches[i].startNode + "\",";
+        resultJson += "\"calculatedPrice\":" + to_string(matches[i].calculatedPrice) + ",";
+        resultJson += "\"compatibilityScore\":" + to_string(matches[i].compatibilityScore) + ",";
+        resultJson += "\"pickupEtaFormatted\":\"" + matches[i].pickupEtaFormatted + "\",";
+        resultJson += "\"dropoffEtaFormatted\":\"" + matches[i].dropoffEtaFormatted + "\",";
+        resultJson += "\"sharedTravelMinutes\":" + to_string(matches[i].sharedTravelMinutes);
+        resultJson += "}";
+        isFirstItem = false;
+    }
+    resultJson += "]";
     return resultJson;
 }
 
@@ -374,7 +428,7 @@ void saveBookings() {
         file << bookingDatabase[i].passengerName << "," << bookingDatabase[i].contactNumber << "," 
              << bookingDatabase[i].emailAddress << "," << bookingDatabase[i].travelDate << "," 
              << bookingDatabase[i].passengerCount << "," << bookingDatabase[i].driverName << ","
-             << bookingDatabase[i].accountUsername << "," << bookingDatabase[i].isRated << "\n";
+             << bookingDatabase[i].accountUsername << "\n";
     }
     file.close();
 }
@@ -388,41 +442,18 @@ void loadBookings() {
         vector<string> parts = splitString(line, ',');
         if (parts.size() >= 6) {
             string accUser = (parts.size() >= 7) ? parts[6] : "unknown";
-            string rated = (parts.size() >= 8) ? parts[7] : "false";
-            if (!rated.empty() && rated.back() == '\r') rated.pop_back();
             if (!accUser.empty() && accUser.back() == '\r') accUser.pop_back();
-            bookingDatabase.push_back({parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], accUser, rated});
+            bookingDatabase.push_back({parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], accUser});
         }
     }
     file.close();
 }
 
-void saveStats() {
-    ofstream file("driver_stats.txt");
-    for (auto const& x : driverProfileDB) {
-        file << x.first << "," << x.second.totalScore << "," << x.second.ratingCount << "," 
-             << x.second.averageRating << "," << x.second.ridesAccepted << "\n";
-    }
-    file.close();
-}
 
-void loadStats() {
-    ifstream file("driver_stats.txt");
-    if (!file.is_open()) return;
-    string line;
-    while (getline(file, line)) {
-        vector<string> parts = splitString(line, ',');
-        if (parts.size() >= 5) {
-            driverProfileDB[parts[0]] = {stof(parts[1]), stoi(parts[2]), stof(parts[3]), stoi(parts[4])};
-        }
-    }
-    file.close();
-}
 
 int main() {
     loadInitialData();
     loadUsers();
-    loadStats();
     loadBookings();
     httplib::Server localServer;
 
@@ -532,45 +563,13 @@ int main() {
         string inputDriverName = request.get_param_value("driverName");
         string inputAccountUsername = request.get_param_value("accountUsername");
         
-        bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName, inputAccountUsername, "false"});
+        bookingDatabase.push_back({inputPassengerName, inputContactNumber, inputEmailAddress, inputTravelDate, inputPassengerCount, inputDriverName, inputAccountUsername});
         
-        driverProfileDB[inputDriverName].ridesAccepted++;
         saveBookings();
-        saveStats();
         
         response.set_content("Success", "text/plain");
     });
 
-    localServer.Get("/api/rate", [](const httplib::Request& request, httplib::Response& response) {
-        response.set_header("Access-Control-Allow-Origin", "*");
-        string user = request.get_param_value("user");
-        string date = request.get_param_value("date");
-        string driver = request.get_param_value("driver");
-        string scoreStr = request.get_param_value("score");
-        
-        if (driver != "" && scoreStr != "") {
-            float score = stof(scoreStr);
-            if (driverProfileDB.find(driver) == driverProfileDB.end()) {
-                driverProfileDB[driver] = {0, 0, 0, 0};
-            }
-            driverProfileDB[driver].totalScore += score;
-            driverProfileDB[driver].ratingCount++;
-            driverProfileDB[driver].averageRating = driverProfileDB[driver].totalScore / driverProfileDB[driver].ratingCount;
-            saveStats();
-
-            for (int i = 0; i < bookingDatabase.size(); i++) {
-                if (bookingDatabase[i].accountUsername == user && 
-                    bookingDatabase[i].driverName == driver && 
-                    bookingDatabase[i].travelDate == date && 
-                    bookingDatabase[i].isRated == "false") {
-                    bookingDatabase[i].isRated = "true";
-                    saveBookings();
-                    break;
-                }
-            }
-        }
-        response.set_content("Success", "text/plain");
-    });
 
     cout << "C++ Web Server is running on port 8080.\n";
     cout << "You can now open the index.html file in your browser.\n";

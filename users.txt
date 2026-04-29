@@ -1,2 +1,12 @@
-student,password123,DRIVER
-1234,1234,DRIVER
+admin,admin,ADMIN
+madhvan,1234,PASSENGER
+neha,1234,PASSENGER
+rahul,1234,PASSENGER
+student,1234,DRIVER
+Speedy John,1234,DRIVER
+Turbo Tom,1234,DRIVER
+Cruise Sarah,1234,DRIVER
+Lightning Luke,1234,DRIVER
+Big Mike,1234,DRIVER
+Drift Dave,1234,DRIVER
+Rapid Rachel,1234,DRIVER

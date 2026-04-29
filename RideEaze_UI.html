@@ -293,14 +293,21 @@
         .autocomplete-item:hover {
             background-color: #f8fafc;
         }
+        .login-overlay-override { display: flex; background: var(--bg-color); backdrop-filter: none; z-index: 9999; }
+        .text-center-modal { max-width: 400px; text-align: center; }
+        .auth-title { margin-bottom: 25px; font-size: 1.8rem; color: var(--accent-primary); }
+        .booking-card-style { padding: 12px; background: #ffffff; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--card-border); }
+        .booking-card-header { display: flex; justify-content: space-between; align-items: center; }
+        .status-badge-done { background-color: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; vertical-align: middle; }
+        .status-badge-upcoming { background-color: #dbeafe; color: #1e40af; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; vertical-align: middle; }
     </style>
 </head>
 
 <body>
 
-    <div id="loginOverlay" class="modal-overlay" style="display: flex; background: var(--bg-color); backdrop-filter: none; z-index: 9999;">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <h2 id="authTitle" style="margin-bottom: 25px; font-size: 1.8rem; color: var(--accent-primary);">RideEaze Login</h2>
+    <div id="loginOverlay" class="modal-overlay login-overlay-override">
+        <div class="modal-content text-center-modal">
+            <h2 id="authTitle" class="auth-title">RideEaze Login</h2>
 
             <div class="input-group" style="text-align: left; margin-bottom: 15px;">
                 <label>Username</label>
@@ -319,7 +326,7 @@
                 </select>
             </div>
 
-            <button id="authBtn" onclick="submitAuth()">Sign In</button>
+            <button id="authBtn" onclick="loginUser()">Sign In</button>
 
             <div style="margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
                 <span id="authToggleText">New user? </span>
@@ -341,12 +348,12 @@
             <div class="input-row">
                 <div class="input-group" style="position: relative;">
                     <label>Pickup Location</label>
-                    <input type="text" id="searchPickup" placeholder="Enter Indian City..." oninput="handleAutocomplete(this, 'pickup')">
+                    <input type="text" id="searchPickup" placeholder="Enter Indian City..." oninput="searchCity(this, 'pickup')">
                     <div id="pickupDropdown" class="autocomplete-dropdown"></div>
                 </div>
                 <div class="input-group" style="position: relative;">
                     <label>Dropoff Location</label>
-                    <input type="text" id="searchDropoff" placeholder="Enter Indian City..." oninput="handleAutocomplete(this, 'dropoff')">
+                    <input type="text" id="searchDropoff" placeholder="Enter Indian City..." oninput="searchCity(this, 'dropoff')">
                     <div id="dropoffDropdown" class="autocomplete-dropdown"></div>
                 </div>
             </div>
@@ -360,7 +367,7 @@
                     <input type="time" id="searchTime">
                 </div>
             </div>
-            <button onclick="executeSearch()">Find Rides</button>
+            <button onclick="searchRides()">Find Rides</button>
 
             <h3 style="margin-top: 35px;">Search Results</h3>
             <div id="resultsArea" class="loading-msg">Search results will appear here...</div>
@@ -376,7 +383,7 @@
                 <div class="input-group" style="position: relative;">
                     <label>Build Route</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="routeBuilderInput" placeholder="Enter City..." oninput="handleAutocomplete(this, 'route')">
+                        <input type="text" id="routeBuilderInput" placeholder="Enter City..." oninput="searchCity(this, 'route')">
                         <button onclick="addCityToRoute()" style="width: auto; padding: 0 20px;">Add</button>
                     </div>
                     <div id="routeDropdown" class="autocomplete-dropdown"></div>
@@ -403,7 +410,7 @@
                     </select>
                 </div>
             </div>
-            <button class="save-btn" onclick="sendDriverToDatabase()">Save Driver</button>
+            <button class="save-btn" onclick="addDriver()">Save Driver</button>
         </div>
     </div>
 
@@ -470,7 +477,7 @@
             document.getElementById('accountTypeGroup').style.display = isLoginMode ? "none" : "flex";
         }
 
-        async function submitAuth() {
+        async function loginUser() {
             let u = document.getElementById('authUsername').value;
             let p = document.getElementById('authPassword').value;
             let t = document.getElementById('authAccountType').value;
@@ -561,7 +568,7 @@
         };
         let autocompleteTimeout = null;
 
-        async function handleAutocomplete(inputElem, type) {
+        async function searchCity(inputElem, type) {
             clearTimeout(autocompleteTimeout);
             let dropdown = document.getElementById(type + "Dropdown");
             let query = inputElem.value;
@@ -613,7 +620,7 @@
         });
 
 
-        async function sendDriverToDatabase() {
+        async function addDriver() {
             var inputName = document.getElementById('newDriverName').value;
             var inputDate = document.getElementById('newDriverDate').value;
             var inputTime = document.getElementById('newDriverTime').value;
@@ -641,27 +648,9 @@
             }
         }
 
-        function formatTimeAMPM(timeInMinutes) {
-            let hours = Math.floor(timeInMinutes / 60);
-            let minutes = timeInMinutes % 60;
-            let ampmIndicator = "AM";
-            if (hours >= 12) {
-                ampmIndicator = "PM";
-            }
-            hours = hours % 12;
-            if (hours == 0) {
-                hours = 12;
-            }
-            let minuteString = "";
-            if (minutes < 10) {
-                minuteString = "0" + minutes;
-            } else {
-                minuteString = "" + minutes;
-            }
-            return hours + ":" + minuteString + " " + ampmIndicator;
-        }
 
-        async function executeSearch() {
+
+        async function searchRides() {
             var pickup = document.getElementById('searchPickup').value;
             var dropoff = document.getElementById('searchDropoff').value;
             var date = document.getElementById('searchDate').value;
@@ -688,51 +677,7 @@
                     return;
                 }
 
-                resultsBox.innerHTML = "<div class='loading-msg'>Calculating route data via C++ Graph...</div>";
 
-                for (var i = 0; i < matchArray.length; i++) {
-                    var currentMatch = matchArray[i];
-
-                    let travelToPickupMinutes = currentMatch.pickupIndex * 45;
-
-                    let calculatedEtaMinutes = currentMatch.driverStartMinutes + travelToPickupMinutes;
-                    let timeDifference = Math.abs(calculatedEtaMinutes - currentMatch.requestedMinutes);
-
-                    let pricePerMinute = 5;
-                    if (currentMatch.carType == "Hatchback") {
-                        pricePerMinute = 4;
-                    } else if (currentMatch.carType == "SUV") {
-                        pricePerMinute = 7;
-                    }
-
-
-                    let sharedDistanceKm = currentMatch.sharedDistanceKm;
-                    let sharedTravelMinutes = Math.floor(sharedDistanceKm * 1.5);
-
-                    let calculatedPrice = 50 + (sharedTravelMinutes * pricePerMinute);
-                    let dropoffEtaMinutes = calculatedEtaMinutes + sharedTravelMinutes;
-
-                    let compatibilityScore = 100 - (currentMatch.extraStops * 5) - Math.floor(timeDifference / 5) - (Math.abs(currentMatch.daysDifference) * 25);
-                    if (compatibilityScore < 0) {
-                        compatibilityScore = 0;
-                    }
-
-                    currentMatch.calculatedPrice = calculatedPrice;
-                    currentMatch.compatibilityScore = compatibilityScore;
-                    currentMatch.pickupEtaFormatted = formatTimeAMPM(calculatedEtaMinutes);
-                    currentMatch.dropoffEtaFormatted = formatTimeAMPM(dropoffEtaMinutes);
-                    currentMatch.sharedTravelMinutes = sharedTravelMinutes;
-                }
-
-                for (var i = 0; i < matchArray.length; i++) {
-                    for (var j = i + 1; j < matchArray.length; j++) {
-                        if (matchArray[j].compatibilityScore > matchArray[i].compatibilityScore) {
-                            var temporaryHolder = matchArray[i];
-                            matchArray[i] = matchArray[j];
-                            matchArray[j] = temporaryHolder;
-                        }
-                    }
-                }
 
                 var finalHtml = "";
                 for (var i = 0; i < matchArray.length; i++) {
@@ -748,7 +693,6 @@
                 <div class='result-card'>
                     <div style="margin-bottom: 8px;">
                         <span class="highlight-name">${currentMatch.driverName}</span>
-                        <span style="color:var(--accent-primary); font-weight:bold; font-size: 0.9em; margin-left: 8px;">⭐ ${currentMatch.rating.toFixed(1)}/5.0</span>
                         <span style="display:block; color:var(--text-secondary); font-size:0.9em; margin-top: 4px;">(${dayNote}) • ${currentMatch.carType}</span>
                     </div>
                     <div style="margin-bottom: 8px; font-size: 0.95em;">
@@ -840,20 +784,6 @@
             document.getElementById('bookingsModal').style.display = "none";
         }
 
-        async function submitRating(driverName, travelDate, selectId, btnElem) {
-            let score = document.getElementById(selectId).value;
-            let currentUser = localStorage.getItem("loggedInUsername");
-            try {
-                await fetch(`http://localhost:8080/api/rate?user=${encodeURIComponent(currentUser)}&driver=${encodeURIComponent(driverName)}&date=${encodeURIComponent(travelDate)}&score=${score}`);
-                alert("Thank you for rating " + driverName + "!");
-                document.getElementById(selectId).disabled = true;
-                btnElem.disabled = true;
-                btnElem.innerText = "Rated";
-            } catch(e) {
-                alert("Error saving rating.");
-            }
-        }
-
         async function fetchBookings() {
             try {
                 let currentUser = localStorage.getItem("loggedInUsername");
@@ -861,64 +791,35 @@
                 let response = await fetch(`http://localhost:8080/api/bookings?user=${encodeURIComponent(currentUser)}`);
                 let bookingsData = await response.json();
 
-                var upcomingOutput = "";
-                var historyOutput = "";
+                var allBookingsOutput = "";
                 let d2 = new Date();
                 d2.setMinutes(d2.getMinutes() - d2.getTimezoneOffset());
                 var todayStr = d2.toISOString().split('T')[0];
 
                 for (var i = 0; i < bookingsData.length; i++) {
                     let isHistory = bookingsData[i].travelDate < todayStr;
-                    let block = `<div style="padding: 12px; background: #ffffff; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--card-border);">
-                        <b style="color: var(--success); font-size: 1.05rem;">Passenger: ${bookingsData[i].passengerName}</b> <span style="color:var(--text-secondary)">(${bookingsData[i].passengerCount} pax)</span><br>
+                    let statusTag = isHistory 
+                        ? `<span class="status-badge-done">Done</span>`
+                        : `<span class="status-badge-upcoming">Upcoming</span>`;
+
+                    let block = `<div class="booking-card-style">
+                        <div class="booking-card-header">
+                            <div>
+                                <b style="color: var(--success); font-size: 1.05rem;">Passenger: ${bookingsData[i].passengerName}</b> 
+                                <span style="color:var(--text-secondary)">(${bookingsData[i].passengerCount} PASSENGER)</span>
+                            </div>
+                            ${statusTag}
+                        </div>
                         <span style="display:inline-block; margin-top:5px; color:var(--text-secondary);">Contact: <span style="color:var(--text-primary);">${bookingsData[i].contactNumber} | ${bookingsData[i].emailAddress}</span></span><br>
                         <hr>
-                        <span style="color: var(--text-secondary); font-weight: 500;">Driver: <span style="color:var(--accent-primary);">${bookingsData[i].driverName}</span></span> on <b style="color:var(--text-primary);">${bookingsData[i].travelDate}</b>`;
+                        <span style="color: var(--text-secondary); font-weight: 500;">Driver: <span style="color:var(--accent-primary);">${bookingsData[i].driverName}</span></span> on <b style="color:var(--text-primary);">${bookingsData[i].travelDate}</b></div>`;
                     
-                    if (isHistory) {
-                        if (accountType === "PASSENGER") {
-                            if (bookingsData[i].isRated === "true") {
-                                block += `<div style="margin-top: 10px; color: var(--success); font-weight: 500;">✓ Rated</div>`;
-                            } else {
-                                block += `<div style="margin-top: 10px; display: flex; gap: 10px;">
-                                    <select id="rate_${i}" style="width: auto; padding: 5px; font-size: 0.9rem;">
-                                        <option value="5">⭐⭐⭐⭐⭐ 5</option>
-                                        <option value="4">⭐⭐⭐⭐ 4</option>
-                                        <option value="3">⭐⭐⭐ 3</option>
-                                        <option value="2">⭐⭐ 2</option>
-                                        <option value="1">⭐ 1</option>
-                                    </select>
-                                    <button onclick="submitRating('${bookingsData[i].driverName}', '${bookingsData[i].travelDate}', 'rate_${i}', this)" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Rate Driver</button>
-                                </div>`;
-                            }
-                        } else {
-                            if (bookingsData[i].isRated === "true") {
-                                block += `<div style="margin-top: 10px; color: var(--success); font-weight: 500;">✓ Passenger Rated You</div>`;
-                            } else {
-                                block += `<div style="margin-top: 10px; color: var(--text-secondary); font-style: italic;">Pending Passenger Rating</div>`;
-                            }
-                        }
-                    }
-                    
-                    block += `</div>`;
-                    
-                    if (isHistory) {
-                        historyOutput += block;
-                    } else {
-                        upcomingOutput += block;
-                    }
+                    allBookingsOutput += block;
                 }
 
                 let finalHtml = `
-                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <button onclick="document.getElementById('upcomingTab').style.display='block'; document.getElementById('historyTab').style.display='none';" style="flex: 1; padding: 10px; border-radius: 6px;">Upcoming Rides</button>
-                        <button onclick="document.getElementById('upcomingTab').style.display='none'; document.getElementById('historyTab').style.display='block';" style="flex: 1; padding: 10px; background: #475569; border-radius: 6px;">Ride History</button>
-                    </div>
-                    <div id="upcomingTab">
-                        ${upcomingOutput === "" ? "<span class='loading-msg'>No upcoming bookings found.</span>" : upcomingOutput}
-                    </div>
-                    <div id="historyTab" style="display: none;">
-                        ${historyOutput === "" ? "<span class='loading-msg'>No past bookings found.</span>" : historyOutput}
+                    <div id="allBookingsTab">
+                        ${allBookingsOutput === "" ? "<span class='loading-msg'>No bookings found.</span>" : allBookingsOutput}
                     </div>
                 `;
 
