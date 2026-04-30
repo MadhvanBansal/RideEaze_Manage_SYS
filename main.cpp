@@ -214,6 +214,61 @@ int getGraphDistance(string startNode, string endNode) {
     return 100; 
 }
 
+vector<string> getShortestPath(string startNode, string endNode) {
+    if (startNode == endNode) return {startNode};
+    if (cityGraph.find(startNode) == cityGraph.end() || cityGraph.find(endNode) == cityGraph.end()) {
+        return {startNode, endNode}; 
+    }
+
+    map<string, int> distances;
+    map<string, string> previous;
+    for (auto const& pair : cityGraph) {
+        distances[pair.first] = 1000000; 
+    }
+    
+    distances[startNode] = 0;
+    
+    priority_queue<pair<int, string>, vector<pair<int, string>>, greater<pair<int, string>>> pq;
+    pq.push({0, startNode});
+
+    while (!pq.empty()) {
+        int currentDist = pq.top().first;
+        string currentCity = pq.top().second;
+        pq.pop();
+
+        if (currentCity == endNode) {
+            break;
+        }
+
+        if (currentDist > distances[currentCity]) {
+            continue;
+        }
+
+        for (auto const& neighbor : cityGraph[currentCity]) {
+            string nextCity = neighbor.first;
+            int weight = neighbor.second;
+
+            if (currentDist + weight < distances[nextCity]) {
+                distances[nextCity] = currentDist + weight;
+                previous[nextCity] = currentCity;
+                pq.push({distances[nextCity], nextCity});
+            }
+        }
+    }
+
+    vector<string> path;
+    if (distances[endNode] == 1000000) {
+        return {startNode, endNode};
+    }
+
+    for (string at = endNode; at != ""; at = previous[at]) {
+        path.push_back(at);
+        if (at == startNode) break;
+    }
+    reverse(path.begin(), path.end());
+    return path;
+}
+
 void loadInitialData() {
     buildCityGraph();
     driverDatabase.push_back({"Madhvan", {"DELHI", "GURGAON", "JAIPUR", "AJMER"}, "2026-05-02", 800, 1200, "SUV"});
@@ -288,14 +343,25 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
     for (int i = 0; i < driverDatabase.size(); i++) {
         DriverRecord currentDriver = driverDatabase[i];
         
+        vector<string> expandedRoute;
+        if (!currentDriver.driverRoute.empty()) {
+            expandedRoute.push_back(currentDriver.driverRoute[0]);
+            for (int k = 0; k < currentDriver.driverRoute.size() - 1; k++) {
+                vector<string> segment = getShortestPath(currentDriver.driverRoute[k], currentDriver.driverRoute[k+1]);
+                for (int x = 1; x < segment.size(); x++) {
+                    expandedRoute.push_back(segment[x]);
+                }
+            }
+        }
+        
         int pickupIndex = -1;
         int dropoffIndex = -1;
         
-        for (int j = 0; j < currentDriver.driverRoute.size(); j++) {
-            if (currentDriver.driverRoute[j] == pickupNode) {
+        for (int j = 0; j < expandedRoute.size(); j++) {
+            if (expandedRoute[j] == pickupNode) {
                 pickupIndex = j;
             }
-            if (currentDriver.driverRoute[j] == dropoffNode) {
+            if (expandedRoute[j] == dropoffNode) {
                 dropoffIndex = j;
             }
         }
@@ -305,18 +371,22 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
 
             string sharedPathString = "";
             for(int x = pickupIndex; x <= dropoffIndex; x++) {
-                sharedPathString = sharedPathString + currentDriver.driverRoute[x];
+                sharedPathString = sharedPathString + expandedRoute[x];
                 if(x < dropoffIndex) {
                     sharedPathString = sharedPathString + "->";
                 }
             }
 
-            int extraStops = currentDriver.driverRoute.size() - (dropoffIndex - pickupIndex + 1);
+            int extraStops = expandedRoute.size() - (dropoffIndex - pickupIndex + 1);
             int calculatedGraphDistance = getGraphDistance(pickupNode, dropoffNode);
             int daysDifference = getDaysDifference(requestedDate, currentDriver.travelDate);
 
-
-            int travelToPickupMinutes = pickupIndex * 45;
+            int travelToPickupDistance = 0;
+            if (pickupIndex > 0) {
+                travelToPickupDistance = getGraphDistance(expandedRoute[0], expandedRoute[pickupIndex]);
+            }
+            
+            int travelToPickupMinutes = floor(travelToPickupDistance * 1.5);
             int calculatedEtaMinutes = driverStartMinutes + travelToPickupMinutes;
             int timeDifference = abs(calculatedEtaMinutes - requestedMinutes);
 
@@ -331,7 +401,7 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             int calculatedPrice = 50 + (sharedTravelMinutes * pricePerMinute);
             int dropoffEtaMinutes = calculatedEtaMinutes + sharedTravelMinutes;
 
-            int compatibilityScore = 100 - (extraStops * 5) - floor(timeDifference / 5.0) - (abs(daysDifference) * 25);
+            int compatibilityScore = 100 - (extraStops * 2) - floor(timeDifference / 5.0) - (abs(daysDifference) * 25);
             if (compatibilityScore < 0) {
                 compatibilityScore = 0;
             }
@@ -347,7 +417,7 @@ string executeSearchAlgorithm(string pickupNode, string dropoffNode, string requ
             match.daysDifference = daysDifference;
             match.pickupIndex = pickupIndex;
             match.travelDate = currentDriver.travelDate;
-            match.startNode = currentDriver.driverRoute[0];
+            match.startNode = expandedRoute[0];
             match.calculatedPrice = calculatedPrice;
             match.compatibilityScore = compatibilityScore;
             match.pickupEtaFormatted = formatTimeAMPM(calculatedEtaMinutes);
